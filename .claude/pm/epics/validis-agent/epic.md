@@ -2,10 +2,10 @@
 name: validis-agent
 status: in-progress
 created: 2025-08-28T12:41:56Z
-updated: 2025-08-28T14:01:20Z
+updated: 2025-08-28T14:17:54Z
 progress: 0%
 prd: .claude/pm/prds/validis-agent.md
-github: https://github.com/validis-group-holdings/validis-agent-mvp/issues/1
+github: https://github.com/validis-group-holdings/validis-agent-psc/issues/1
 ---
 
 # Epic: validis-agent
