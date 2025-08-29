@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { checkDatabaseHealth } from '@/db/connection';
-import { checkRedisHealth } from '@/db/redis';
-import { config } from '@/config';
+import { checkDatabaseHealth } from '../db/connection';
+import { checkRedisHealth } from '../db/redis';
+import { config } from '../config';
 
 const router = Router();
 

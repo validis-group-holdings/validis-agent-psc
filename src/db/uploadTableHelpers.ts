@@ -1,6 +1,6 @@
 import sql from 'mssql';
 import { getDatabaseConnection } from './connection';
-import { config } from '@/config';
+import { config } from '../config';
 import { UploadTableInfo, QueryResult } from '@/types';
 
 /**

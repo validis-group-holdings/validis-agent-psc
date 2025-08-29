@@ -1,11 +1,11 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { config } from '@/config';
-import { connectDatabase } from '@/db/connection';
-import { connectRedis } from '@/db/redis';
-import { healthRouter } from '@/routes/health';
-import { errorHandler } from '@/middleware/errorHandler';
+import { config } from './config';
+import { connectDatabase } from './db/connection';
+import { connectRedis } from './db/redis';
+import { healthRouter } from './routes/health';
+import { errorHandler } from './middleware/errorHandler';
 
 const app = express();
 
