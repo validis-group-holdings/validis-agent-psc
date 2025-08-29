@@ -29,6 +29,7 @@ export interface FinancialQueryResponse {
   error?: string;
   cached?: boolean;
   suggestedTables?: string[];
+<<<<<<< HEAD
 }
 
 // Safety layer types
@@ -83,4 +84,6 @@ export interface CircuitBreakerState {
   failureCount: number;
   lastFailureTime?: Date;
   nextAttemptTime?: Date;
+=======
+>>>>>>> main
 }

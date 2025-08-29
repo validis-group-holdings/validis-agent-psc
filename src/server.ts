@@ -1,20 +1,20 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { config } from '@/config';
-import { connectDatabase } from '@/db/connection';
-import { connectRedis } from '@/db/redis';
-import { healthRouter } from '@/routes/health';
-import { queryRouter } from '@/routes/query';
-import { errorHandler } from '@/middleware/errorHandler';
-import { initializeSafetyLayer, shutdownSafetyLayer } from '@/safety';
+import { config } from './config';
+import { connectDatabase } from './db/connection';
+import { connectRedis } from './db/redis';
+import { healthRouter } from './routes/health';
+import { queryRouter } from './routes/query';
+import { errorHandler } from './middleware/errorHandler';
+import { initializeSafetyLayer, shutdownSafetyLayer } from './safety';
 import { 
   auditLogger, 
   clientRateLimit,
   systemMetrics,
   emergencyControls,
   queryStatus
-} from '@/middleware/safety';
+} from './middleware/safety';
 
 const app = express();
 
