@@ -43,6 +43,28 @@ if (!process.env.DEBUG_TESTS) {
 // Global test timeout
 jest.setTimeout(10000);
 
+// Mock Anthropic API client
+jest.mock('@langchain/anthropic', () => ({
+  ChatAnthropic: jest.fn().mockImplementation(() => ({
+    invoke: jest.fn().mockImplementation(async (messages) => {
+      const content = messages.content || messages[0]?.content || '';
+      
+      // Mock different responses based on query content
+      if (content.includes('journal')) {
+        return { content: 'journalEntries template with amount threshold filtering' };
+      } else if (content.includes('cash flow')) {
+        return { content: 'liquidityAnalysis template for cash flow patterns' };
+      } else if (content.includes('vendor')) {
+        return { content: 'vendorPayments template for payment analysis' };
+      } else if (content.includes('weekend')) {
+        return { content: 'weekendTransactions template for unusual timing' };
+      }
+      
+      return { content: 'Generic analysis template recommendation' };
+    })
+  }))
+}));
+
 // Mock configuration module
 jest.mock('../../config', () => ({
   config: {

@@ -4,6 +4,37 @@ import { config } from '../config';
 import { UploadTableInfo, QueryResult } from '../types';
 
 /**
+ * Get upload table information for all clients (used by lending mode)
+ */
+export async function getUploadTableInfo(): Promise<UploadTableInfo[]> {
+  const pool = getDatabaseConnection();
+  const request = pool.request();
+  
+  try {
+    // This query gets all upload table info across all clients for lending mode
+    const query = `
+      SELECT 
+        table_name as tableName,
+        client_id as clientId,
+        upload_date as uploadDate,
+        record_count as recordCount,
+        file_type as fileType,
+        status
+      FROM upload_table_metadata 
+      WHERE status = 'active'
+      ORDER BY client_id, upload_date DESC
+    `;
+    
+    const result = await request.query(query);
+    return result.recordset;
+    
+  } catch (error) {
+    console.error('Error fetching upload table info:', error);
+    return [];
+  }
+}
+
+/**
  * Get all upload tables available for a specific client
  */
 export async function getUploadTablesForClient(clientId: string): Promise<UploadTableInfo[]> {

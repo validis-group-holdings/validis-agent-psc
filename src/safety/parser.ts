@@ -115,10 +115,12 @@ export class QueryParser {
   private static hasUploadTablePattern(query: string): boolean {
     const uploadTablePatterns = [
       /\bupload_table_\w+/i,
-      /\w+_upload\b/i,
+      /\bupload_\w+/i,  // matches upload_test_202401, upload_client_a_202401, etc.
+      /\w+_upload\b/i,  // matches client_upload, data_upload_temp, etc.
       /\bupload\w*table\w*/i,
-      /\bclient_upload\w*/i,
-      /\btemp_upload\w*/i
+      /\bclient_upload/i,
+      /\btemp_upload/i,
+      /\b\w*upload\w*/i  // broad pattern for any word containing 'upload'
     ];
     
     return uploadTablePatterns.some(pattern => pattern.test(query));
@@ -227,7 +229,7 @@ export class QueryParser {
     const dangerousPatterns = [
       { pattern: /;\s*(drop|delete|truncate|alter)\b/i, message: 'Multiple statements with dangerous operations' },
       { pattern: /union.*select.*from/i, message: 'Potential SQL injection via UNION' },
-      { pattern: /'\s*or\s*['"].*['"]=/i, message: 'Potential SQL injection pattern' },
+      { pattern: /\bor\s+['"]\d+['"]?\s*=\s*['"]\d+['"]?/i, message: 'Potential SQL injection pattern' },
       { pattern: /--[^\r\n]*|\/\*[\s\S]*?\*\//g, message: 'SQL comments detected' },
       { pattern: /exec\s*\(/i, message: 'Dynamic SQL execution' },
       { pattern: /xp_cmdshell/i, message: 'Command execution function' },
