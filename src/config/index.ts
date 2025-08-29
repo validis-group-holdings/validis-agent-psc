@@ -36,6 +36,12 @@ const envSchema = z.object({
   // Query limits
   MAX_QUERY_RESULTS: z.string().transform(Number).default('1000'),
   QUERY_TIMEOUT_MS: z.string().transform(Number).default('30000'), // 30 seconds
+  
+  // Mode management configuration
+  ALLOW_MODE_SWITCHING: z.string().transform(val => val === 'true').default('false'),
+  SESSION_TIMEOUT_MS: z.string().transform(Number).default('43200000'), // 12 hours
+  MAX_SESSIONS_PER_CLIENT: z.string().transform(Number).default('5'),
+  MODE_LOCK_TIMEOUT_MS: z.string().transform(Number).default('28800000'), // 8 hours
 });
 
 type EnvConfig = z.infer<typeof envSchema>;
@@ -98,6 +104,15 @@ class Config {
     return {
       maxResults: this.config.MAX_QUERY_RESULTS,
       timeoutMs: this.config.QUERY_TIMEOUT_MS,
+    };
+  }
+
+  get modeManagement() {
+    return {
+      allowModeSwitching: this.config.ALLOW_MODE_SWITCHING,
+      sessionTimeout: this.config.SESSION_TIMEOUT_MS,
+      maxSessionsPerClient: this.config.MAX_SESSIONS_PER_CLIENT,
+      modeLockTimeout: this.config.MODE_LOCK_TIMEOUT_MS,
     };
   }
 

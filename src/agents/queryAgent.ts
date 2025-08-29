@@ -7,12 +7,16 @@ import { QueryValidator } from '../safety/validator';
 import { QueryGovernor } from '../safety/governor';
 import { QueryCostEstimator } from '../safety/estimator';
 import { getTemplatesByWorkflow } from '../templates';
+import { SessionContext } from '../modes/types';
+import { sessionManager } from '../session/manager';
+import { modeManager } from '../modes';
 
 export interface AgentQueryRequest {
   query: string;
   clientId: string;
   workflowMode: 'audit' | 'lending';
   uploadId?: string;
+  sessionId?: string;
   forceTemplate?: string;
   skipParameterExtraction?: boolean;
   maxResults?: number;
@@ -21,6 +25,7 @@ export interface AgentQueryRequest {
 export interface AgentQueryResponse {
   success: boolean;
   queryId?: string;
+  sessionId?: string;
   data?: any[];
   template?: {
     id: string;
@@ -37,6 +42,16 @@ export interface AgentQueryResponse {
     validation: any;
     governance: any;
     costEstimate: any;
+  };
+  mode?: {
+    current: 'audit' | 'lending';
+    constraints: any;
+    appliedFilters: string[];
+    recommendations: string[];
+  };
+  session?: {
+    context: Partial<SessionContext>;
+    stats: any;
   };
   error?: string;
   warnings?: string[];
@@ -66,14 +81,72 @@ export class QueryAgent {
     const startTime = Date.now();
     const processingSteps: string[] = [];
     const warnings: string[] = [];
+    let sessionContext: SessionContext | null = null;
 
     try {
       processingSteps.push('Starting query processing');
 
+      // Step 0: Session Management
+      processingSteps.push('Managing session context');
+      if (request.sessionId) {
+        sessionContext = await sessionManager.getSession(request.sessionId);
+        if (!sessionContext) {
+          return {
+            success: false,
+            error: 'Session not found or expired',
+            warnings: ['Please start a new session'],
+            executionTime: Date.now() - startTime,
+            metadata: {
+              rowCount: 0,
+              processingSteps,
+              confidence: 0
+            }
+          };
+        }
+      } else {
+        // Create new session
+        sessionContext = await sessionManager.createSession(
+          request.clientId,
+          request.workflowMode,
+          request.uploadId
+        );
+      }
+
+      // Apply mode constraints to query before processing
+      processingSteps.push('Applying mode constraints');
+      const constraintApplication = await sessionManager.applySessionConstraints(
+        sessionContext.sessionId,
+        request.query
+      );
+
+      if (constraintApplication.errors.length > 0) {
+        return {
+          success: false,
+          sessionId: sessionContext.sessionId,
+          error: 'Query violates mode constraints',
+          warnings: constraintApplication.modification?.warnings || [],
+          mode: {
+            current: sessionContext.mode,
+            constraints: modeManager.getModeConstraints(sessionContext.mode),
+            appliedFilters: [],
+            recommendations: await sessionManager.getSessionRecommendations(sessionContext.sessionId)
+          },
+          executionTime: Date.now() - startTime,
+          metadata: {
+            rowCount: 0,
+            processingSteps,
+            confidence: 0
+          }
+        };
+      }
+
+      const constrainedQuery = constraintApplication.modification.modifiedQuery;
+      const appliedConstraints = constraintApplication.modification.appliedConstraints;
+
       // Step 1: Intent Classification
       processingSteps.push('Analyzing query intent');
       const intentResult = await this.intentClassifier.classifyIntent(
-        request.query,
+        constrainedQuery,
         request.workflowMode
       );
 
@@ -283,6 +356,7 @@ export class QueryAgent {
       return {
         success: true,
         queryId: `query_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        sessionId: sessionContext.sessionId,
         data: executionResult.data,
         template: {
           id: template.id,
@@ -291,12 +365,29 @@ export class QueryAgent {
         },
         parameters,
         safety: { validation, governance, costEstimate },
+        mode: {
+          current: sessionContext.mode,
+          constraints: modeManager.getModeConstraints(sessionContext.mode),
+          appliedFilters: appliedConstraints,
+          recommendations: await sessionManager.getSessionRecommendations(sessionContext.sessionId)
+        },
+        session: {
+          context: {
+            sessionId: sessionContext.sessionId,
+            clientId: sessionContext.clientId,
+            mode: sessionContext.mode,
+            currentUploadId: sessionContext.currentUploadId,
+            companyContext: sessionContext.companyContext,
+            portfolioContext: sessionContext.portfolioContext
+          },
+          stats: modeManager.getSessionStats(sessionContext)
+        },
         analysis: {
           intent: intentResult,
           templateSelection: templateResult,
           parameterExtraction: parameterResult
         },
-        warnings,
+        warnings: [...warnings, ...constraintApplication.modification.warnings],
         executionTime: Date.now() - startTime,
         metadata: {
           rowCount: executionResult.rowCount || 0,

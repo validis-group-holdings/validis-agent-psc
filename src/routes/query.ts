@@ -10,8 +10,15 @@ import { QueryAgent, AgentQueryRequest } from '../agents/queryAgent';
 
 export const queryRouter = Router();
 
-// Initialize query agent
-const queryAgent = new QueryAgent();
+// Initialize query agent lazily
+let queryAgent: QueryAgent | null = null;
+
+function getQueryAgent(): QueryAgent {
+  if (!queryAgent) {
+    queryAgent = new QueryAgent();
+  }
+  return queryAgent;
+}
 
 /**
  * Process natural language query using the agent pipeline
@@ -43,7 +50,8 @@ queryRouter.post('/',
       };
 
       // Validate request
-      const validation = await queryAgent.validateQuery(request);
+      const agent = getQueryAgent();
+      const validation = await agent.validateQuery(request);
       if (!validation.isValid) {
         res.status(400).json({
           success: false,
@@ -55,7 +63,7 @@ queryRouter.post('/',
       }
 
       // Process the query
-      const result = await queryAgent.processQuery(request);
+      const result = await agent.processQuery(request);
       
       // Return result with appropriate status code
       const statusCode = result.success ? 200 : 400;
@@ -113,7 +121,7 @@ queryRouter.post('/analyze',
         return;
       }
 
-      const analysis = await queryAgent.analyzeQuery(query, workflowMode);
+      const analysis = await getQueryAgent().analyzeQuery(query, workflowMode);
       
       res.json({
         success: true,
@@ -172,7 +180,7 @@ queryRouter.post('/suggestions',
         return;
       }
 
-      const suggestions = queryAgent.getQuerySuggestions(partialQuery || '', workflowMode);
+      const suggestions = getQueryAgent().getQuerySuggestions(partialQuery || '', workflowMode);
       
       res.json({
         success: true,
@@ -208,7 +216,7 @@ queryRouter.get('/templates/:workflow',
         return;
       }
 
-      const templates = queryAgent.getAvailableTemplates(workflow);
+      const templates = getQueryAgent().getAvailableTemplates(workflow);
       
       res.json({
         success: true,

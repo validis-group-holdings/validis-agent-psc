@@ -1,11 +1,7 @@
 import sql from 'mssql';
 import { getDatabaseConnection } from './connection';
-<<<<<<< HEAD
-import { config } from '@/config';
-=======
 import { config } from '../config';
->>>>>>> main
-import { UploadTableInfo, QueryResult } from '@/types';
+import { UploadTableInfo, QueryResult } from '../types';
 
 /**
  * Get all upload tables available for a specific client
