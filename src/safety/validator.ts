@@ -239,10 +239,12 @@ export class QueryValidator {
   private static isUploadTableName(tableName: string): boolean {
     const uploadPatterns = [
       /^upload_table_/i,
-      /_upload$/i,
+      /^upload_\w+/i,  // matches upload_test_202401, upload_client_a_202401, etc.
+      /_upload$/i,     // matches client_upload, data_upload_temp, etc.
       /^client_upload/i,
       /^temp_upload/i,
-      /upload.*table/i
+      /upload.*table/i,
+      /^.*upload.*$/i  // broad pattern for any name containing 'upload'
     ];
     
     return uploadPatterns.some(pattern => pattern.test(tableName));

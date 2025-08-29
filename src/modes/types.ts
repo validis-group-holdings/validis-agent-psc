@@ -116,7 +116,7 @@ export interface ModeStrategy {
   /**
    * Validate upload context requirements
    */
-  validateUploadContext(uploadId: string | undefined, context: ModeContext): ModeValidation;
+  validateUploadContext(uploadId: string | undefined, context: ModeContext): Promise<UploadContextValidation>;
 }
 
 /**
