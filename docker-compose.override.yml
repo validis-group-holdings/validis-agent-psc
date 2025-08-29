@@ -1,0 +1,32 @@
+# Local development overrides
+version: '3.8'
+
+services:
+  # Override for local development with hot reload
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: validis-app-dev
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - WORKFLOW_MODE=audit
+      - CLIENT_ID=test-client-001
+      - DB_SERVER=host.docker.internal  # Use host machine for DB during dev
+      - DB_DATABASE=validis_dev
+      - DB_USERNAME=sa
+      - DB_PASSWORD=YourStrong@Password123
+      - REDIS_URL=redis://host.docker.internal:6379
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-sk-test-key}
+      - JWT_SECRET=development-secret-key
+      - SESSION_SECRET=development-session-key
+    ports:
+      - "3000:3000"
+      - "9229:9229"  # Node.js debugging port
+    volumes:
+      - ./src:/app/src
+      - ./package.json:/app/package.json
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./.env:/app/.env
+    command: npm run dev
