@@ -1,9 +1,5 @@
 import sql from 'mssql';
-<<<<<<< HEAD
-import { config } from '@/config';
-=======
 import { config } from '../config';
->>>>>>> main
 
 let connectionPool: sql.ConnectionPool | null = null;
 
