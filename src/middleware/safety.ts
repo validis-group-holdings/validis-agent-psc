@@ -6,6 +6,8 @@ import { QueryQueueManager } from '@/safety/queue';
 import { OverloadProtection } from '@/safety/circuitBreaker';
 import { config } from '@/config';
 import { FinancialQueryRequest, FinancialQueryResponse } from '@/types';
+import { sessionManager } from '@/session/manager';
+import { modeManager } from '@/modes';
 
 /**
  * Safety middleware for query interception and protection
@@ -15,7 +17,80 @@ interface SafetyRequest extends Request {
   queryAnalysis?: any;
   estimatedCost?: any;
   safetyValidation?: any;
+  sessionId?: string;
+  sessionContext?: any;
 }
+
+/**
+ * Session validation middleware - checks and initializes session context
+ */
+export const sessionValidation = async (
+  req: SafetyRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { clientId, workflowMode } = req.body as FinancialQueryRequest;
+    const sessionId = req.headers['x-session-id'] as string;
+    
+    if (!clientId || !workflowMode) {
+      res.status(400).json({
+        success: false,
+        error: 'Missing required fields: clientId, workflowMode'
+      });
+      return;
+    }
+
+    let sessionContext;
+    
+    if (sessionId) {
+      // Try to get existing session
+      sessionContext = await sessionManager.getSession(sessionId);
+      
+      if (!sessionContext) {
+        res.status(401).json({
+          success: false,
+          error: 'Session not found or expired',
+          requiresNewSession: true
+        });
+        return;
+      }
+      
+      // Validate session matches request
+      if (sessionContext.clientId !== clientId || sessionContext.mode !== workflowMode) {
+        res.status(400).json({
+          success: false,
+          error: 'Session context mismatch with request parameters'
+        });
+        return;
+      }
+      
+      // Update session activity
+      sessionContext = await sessionManager.updateSession(sessionContext);
+      
+    } else {
+      // Create new session
+      const uploadId = req.body.uploadId;
+      sessionContext = await sessionManager.createSession(clientId, workflowMode, uploadId);
+      
+      // Set session ID in response header for client to use
+      res.setHeader('x-session-id', sessionContext.sessionId);
+    }
+
+    // Store session context in request
+    req.sessionId = sessionContext.sessionId;
+    req.sessionContext = sessionContext;
+
+    next();
+    
+  } catch (error) {
+    console.error('Error in session validation:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Session validation failed'
+    });
+  }
+};
 
 /**
  * Pre-execution safety check middleware
@@ -26,12 +101,21 @@ export const querySafetyCheck = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { query, clientId, workflowMode } = req.body as FinancialQueryRequest;
+    const { query } = req.body as FinancialQueryRequest;
+    const sessionContext = req.sessionContext;
     
-    if (!query || !clientId || !workflowMode) {
+    if (!query) {
       res.status(400).json({
         success: false,
-        error: 'Missing required fields: query, clientId, workflowMode'
+        error: 'Query is required'
+      });
+      return;
+    }
+
+    if (!sessionContext) {
+      res.status(401).json({
+        success: false,
+        error: 'Session context required - ensure session validation middleware runs first'
       });
       return;
     }
@@ -47,12 +131,15 @@ export const querySafetyCheck = async (
       return;
     }
 
-    // Quick validation for immediate rejection
-    const quickValidation = QueryValidator.quickValidate(query);
-    if (!quickValidation.isValid) {
+    // Session-based query validation using mode constraints
+    const sessionValidation = await sessionManager.validateSessionQuery(req.sessionId!, query);
+    if (!sessionValidation.isValid) {
       res.status(400).json({
         success: false,
-        error: `Query validation failed: ${quickValidation.reason}`
+        error: 'Query validation failed',
+        details: sessionValidation.errors,
+        warnings: sessionValidation.warnings,
+        sessionValid: sessionValidation.session !== null
       });
       return;
     }
@@ -70,7 +157,9 @@ export const querySafetyCheck = async (
     // Store analysis for later use
     req.queryAnalysis = {
       validated: true,
-      complexity: costCheck.estimatedComplexity
+      complexity: costCheck.estimatedComplexity,
+      sessionValidation: sessionValidation.validation,
+      modeConstraints: modeManager.getModeConstraints(sessionContext.mode)
     };
 
     next();
@@ -93,14 +182,37 @@ export const queryValidationAndGovernance = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { query, clientId, workflowMode, maxResults } = req.body as FinancialQueryRequest;
+    const { query, maxResults } = req.body as FinancialQueryRequest;
+    const sessionContext = req.sessionContext;
 
-    // Full validation
-    const validation = await QueryValidator.validate(query, clientId, workflowMode);
+    if (!sessionContext) {
+      res.status(401).json({
+        success: false,
+        error: 'Session context required'
+      });
+      return;
+    }
+
+    // Apply session-based mode constraints
+    const constraintApplication = await sessionManager.applySessionConstraints(req.sessionId!, query);
+    if (constraintApplication.errors.length > 0) {
+      res.status(400).json({
+        success: false,
+        error: 'Failed to apply mode constraints',
+        details: constraintApplication.errors
+      });
+      return;
+    }
+
+    const modifiedQuery = constraintApplication.modification.modifiedQuery;
+    const appliedConstraints = constraintApplication.modification.appliedConstraints;
+
+    // Legacy validation for additional safety
+    const validation = await QueryValidator.validate(modifiedQuery, sessionContext.clientId, sessionContext.mode);
     if (!validation.isValid) {
       res.status(400).json({
         success: false,
-        error: 'Query validation failed',
+        error: 'Query validation failed after mode constraints',
         details: validation.errors,
         warnings: validation.warnings
       });
@@ -112,10 +224,10 @@ export const queryValidationAndGovernance = async (
     
     // Apply governance with adaptive limits
     const governance = QueryGovernor.adaptiveGovernance(
-      query, 
+      modifiedQuery, 
       loadStats.loadLevel, 
-      clientId, 
-      workflowMode
+      sessionContext.clientId, 
+      sessionContext.mode
     );
     
     if (!governance.isValid) {
@@ -130,18 +242,24 @@ export const queryValidationAndGovernance = async (
 
     // Cost estimation for monitoring
     const costEstimate = await QueryCostEstimator.estimate(
-      governance.modifiedQuery || query
+      governance.modifiedQuery || modifiedQuery
     );
 
     // Store results for execution
     req.safetyValidation = {
       originalQuery: query,
-      governedQuery: governance.modifiedQuery || query,
+      governedQuery: governance.modifiedQuery || modifiedQuery,
       validation,
       governance,
       costEstimate,
-      warnings: [...validation.warnings, ...governance.warnings],
-      maxResults: maxResults || 100
+      modeConstraints: constraintApplication.modification,
+      appliedConstraints,
+      warnings: [
+        ...validation.warnings, 
+        ...governance.warnings,
+        ...constraintApplication.modification.warnings
+      ],
+      maxResults: maxResults || modeManager.getModeConstraints(sessionContext.mode).maxRowsPerQuery
     };
 
     next();
@@ -164,21 +282,32 @@ export const queuedExecution = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { clientId, workflowMode } = req.body as FinancialQueryRequest;
-    const { governedQuery, costEstimate } = req.safetyValidation;
+    const sessionContext = req.sessionContext;
+    const { governedQuery, costEstimate, appliedConstraints } = req.safetyValidation;
 
-    // Determine priority based on cost estimate
+    if (!sessionContext) {
+      res.status(401).json({
+        success: false,
+        error: 'Session context required'
+      });
+      return;
+    }
+
+    // Determine priority based on cost estimate and mode
     let priority = 5; // Normal priority
     if (costEstimate.riskLevel === 'low') priority = 3;
     else if (costEstimate.riskLevel === 'high') priority = 7;
     else if (costEstimate.riskLevel === 'critical') priority = 9;
+    
+    // Adjust priority based on mode
+    if (sessionContext.mode === 'audit') priority += 1; // Audit gets slightly higher priority
 
     // Enqueue the query
     const queueManager = QueryQueueManager.getInstance();
     const { queryId, estimatedWait } = await queueManager.enqueueQuery(
       governedQuery,
-      clientId,
-      workflowMode,
+      sessionContext.clientId,
+      sessionContext.mode,
       priority
     );
 
@@ -186,14 +315,18 @@ export const queuedExecution = async (
     res.json({
       success: true,
       queryId,
+      sessionId: sessionContext.sessionId,
       status: 'queued',
       estimatedWait,
+      mode: sessionContext.mode,
+      appliedConstraints,
       warnings: req.safetyValidation.warnings,
       costEstimate: {
         riskLevel: costEstimate.riskLevel,
         estimatedTime: costEstimate.estimatedTime,
         recommendations: costEstimate.recommendations
-      }
+      },
+      modeRecommendations: sessionManager.getSessionRecommendations(sessionContext.sessionId)
     } as FinancialQueryResponse);
     
   } catch (error) {
