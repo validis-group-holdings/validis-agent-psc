@@ -293,4 +293,20 @@ export function validateExecutionContext(context: ExecutionContext): {
   };
 }
 
+// Convenience function for direct template execution
+export async function executeTemplate(
+  template: QueryTemplate, 
+  context: ExecutionContext
+): Promise<TemplateExecutionResult> {
+  const executor = new TemplateExecutor();
+  try {
+    const result = await executor.executeTemplate(template, context);
+    await executor.close();
+    return result;
+  } catch (error) {
+    await executor.close();
+    throw error;
+  }
+}
+
 export default TemplateExecutor;
