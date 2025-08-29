@@ -16,8 +16,10 @@ export interface QueryTemplate {
   parameters: QueryParameter[];
   sql: string;
   estimatedRuntime: number; // seconds
+  estimatedExecutionTime?: number; // milliseconds - for compatibility
   complexity: 'low' | 'medium' | 'high';
   tags?: string[];
+  expectedColumns?: string[];
 }
 
 export interface TemplateExecutionResult {

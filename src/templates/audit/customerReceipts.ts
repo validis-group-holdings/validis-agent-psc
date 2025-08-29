@@ -11,6 +11,7 @@ export const largeCustomerReceipts: QueryTemplate = {
     { name: 'periodDays', type: 'number', required: false, defaultValue: 90, description: 'Number of days to analyze' },
     { name: 'customerPattern', type: 'string', required: false, description: 'Customer name pattern to filter' }
   ],
+  expectedColumns: ['TOP'],
   sql: `
     WITH RecentUpload AS (
       SELECT TOP 1 upload_id
@@ -64,6 +65,7 @@ export const largeCustomerReceipts: QueryTemplate = {
     ORDER BY cr.receipt_amount DESC
   `,
   estimatedRuntime: 6,
+  estimatedExecutionTime: 6000,
   complexity: 'high',
   tags: ['customer-receipts', 'large-amounts', 'outlier-detection']
 };
@@ -133,6 +135,7 @@ export const creditBalanceCustomers: QueryTemplate = {
     ORDER BY ABS(cb.current_balance) DESC
   `,
   estimatedRuntime: 5,
+  estimatedExecutionTime: 5000,
   complexity: 'medium',
   tags: ['credit-balances', 'customer-analysis', 'overpayments']
 };

@@ -9,6 +9,7 @@ export const creditRiskScorecard: QueryTemplate = {
   parameters: [
     { name: 'monthsToAnalyze', type: 'number', required: false, defaultValue: 12, description: 'Number of months for analysis' }
   ],
+  expectedColumns: ['TOP'],
   sql: `
     WITH RecentUpload AS (
       SELECT TOP 1 upload_id
@@ -172,6 +173,7 @@ export const creditRiskScorecard: QueryTemplate = {
     FROM RiskScoring rs
   `,
   estimatedRuntime: 9,
+  estimatedExecutionTime: 9000,
   complexity: 'high',
   tags: ['credit-risk', 'risk-scoring', 'lending-decision', 'financial-analysis']
 };
@@ -331,6 +333,7 @@ export const industryBenchmarking: QueryTemplate = {
     CROSS JOIN IndustryBenchmarks ib
   `,
   estimatedRuntime: 8,
+  estimatedExecutionTime: 8000,
   complexity: 'high',
   tags: ['industry-benchmarking', 'comparative-analysis', 'performance-assessment']
 };

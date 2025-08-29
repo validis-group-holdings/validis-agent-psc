@@ -295,6 +295,8 @@ export class QueryQueueManager {
     timeouts: number;
     averageWaitTime: number;
     averageExecutionTime: number;
+    maxConcurrent: number;
+    maxQueueSize: number;
   } {
     const completedItems = Array.from(this.completed.values());
     
@@ -328,7 +330,9 @@ export class QueryQueueManager {
       failed,
       timeouts,
       averageWaitTime: Math.round(averageWaitTime),
-      averageExecutionTime: Math.round(averageExecutionTime)
+      averageExecutionTime: Math.round(averageExecutionTime),
+      maxConcurrent: this.maxConcurrent,
+      maxQueueSize: this.maxQueueSize
     };
   }
 

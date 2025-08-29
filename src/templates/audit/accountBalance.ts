@@ -11,6 +11,7 @@ export const accountBalanceReconciliation: QueryTemplate = {
     { name: 'varianceThreshold', type: 'number', required: false, defaultValue: 1000, description: 'Minimum variance to report' },
     { name: 'accountType', type: 'string', required: false, description: 'Filter by account type (optional)' }
   ],
+  expectedColumns: ['TOP'],
   sql: `
     WITH RecentUpload AS (
       SELECT TOP 1 upload_id
@@ -52,6 +53,7 @@ export const accountBalanceReconciliation: QueryTemplate = {
     ORDER BY ABS(ab.balance_change) DESC
   `,
   estimatedRuntime: 5,
+  estimatedExecutionTime: 5000,
   complexity: 'medium',
   tags: ['balance-reconciliation', 'variance-analysis', 'period-comparison']
 };
@@ -104,6 +106,7 @@ export const negativeBalanceAccounts: QueryTemplate = {
     ORDER BY lb.ending_balance ASC
   `,
   estimatedRuntime: 3,
+  estimatedExecutionTime: 3000,
   complexity: 'low',
   tags: ['negative-balances', 'account-analysis', 'balance-validation']
 };

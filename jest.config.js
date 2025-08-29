@@ -1,11 +1,18 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
+  setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts'],
   roots: ['<rootDir>/src', '<rootDir>/tests'],
   testMatch: [
     '**/__tests__/**/*.ts',
     '**/?(*.)+(spec|test).ts',
-    '**/tests/**/*.ts'
+    '**/tests/**/*.test.ts',
+    '**/tests/**/*.e2e.ts'
+  ],
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/tests/utils/',
+    '/__tests__/setup.ts'
   ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1'

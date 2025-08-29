@@ -11,6 +11,7 @@ export const weekendTransactions: QueryTemplate = {
     { name: 'startDate', type: 'date', required: false, description: 'Start date for analysis' },
     { name: 'endDate', type: 'date', required: false, description: 'End date for analysis' }
   ],
+  expectedColumns: ['transaction_id', 'transaction_date', 'posting_date', 'amount', 'account_code', 'account_name', 'description', 'reference_number', 'posting_weekday', 'day_type'],
   sql: `
     WITH RecentUpload AS (
       SELECT TOP 1 upload_id
@@ -42,6 +43,7 @@ export const weekendTransactions: QueryTemplate = {
     ORDER BY t.posting_date DESC, t.amount DESC
   `,
   estimatedRuntime: 4,
+  estimatedExecutionTime: 4000,
   complexity: 'medium',
   tags: ['weekend', 'unusual-timing', 'risk-indicators']
 };
@@ -57,6 +59,7 @@ export const afterHoursTransactions: QueryTemplate = {
     { name: 'endHour', type: 'number', required: false, defaultValue: 8, description: 'Hour before which transactions are suspicious' },
     { name: 'minAmount', type: 'number', required: false, defaultValue: 1000, description: 'Minimum amount threshold' }
   ],
+  expectedColumns: ['transaction_id', 'transaction_date', 'posting_date', 'amount', 'account_code', 'description', 'posting_hour', 'time_classification'],
   sql: `
     WITH RecentUpload AS (
       SELECT TOP 1 upload_id
@@ -86,6 +89,7 @@ export const afterHoursTransactions: QueryTemplate = {
     ORDER BY t.posting_date DESC
   `,
   estimatedRuntime: 5,
+  estimatedExecutionTime: 5000,
   complexity: 'medium',
   tags: ['after-hours', 'timing-analysis', 'fraud-indicators']
 };

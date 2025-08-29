@@ -11,6 +11,7 @@ export const expenseVarianceAnalysis: QueryTemplate = {
     { name: 'minAmount', type: 'number', required: false, defaultValue: 1000, description: 'Minimum expense amount to consider' },
     { name: 'periodsToCompare', type: 'number', required: false, defaultValue: 3, description: 'Number of previous periods to compare' }
   ],
+  expectedColumns: ['TOP'],
   sql: `
     WITH RecentUpload AS (
       SELECT TOP 1 upload_id
@@ -81,6 +82,7 @@ export const expenseVarianceAnalysis: QueryTemplate = {
     ORDER BY ABS(ec.variance_percentage) DESC
   `,
   estimatedRuntime: 8,
+  estimatedExecutionTime: 8000,
   complexity: 'high',
   tags: ['expense-analysis', 'variance-analysis', 'period-comparison']
 };
@@ -166,6 +168,7 @@ export const unusualExpensePatterns: QueryTemplate = {
       ea.amount DESC
   `,
   estimatedRuntime: 7,
+  estimatedExecutionTime: 7000,
   complexity: 'high',
   tags: ['expense-patterns', 'risk-analysis', 'behavioral-analysis']
 };

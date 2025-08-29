@@ -11,6 +11,7 @@ export const unusualUserActivity: QueryTemplate = {
     { name: 'amountThreshold', type: 'number', required: false, defaultValue: 50000, description: 'Total amount threshold for flagging' },
     { name: 'days', type: 'number', required: false, defaultValue: 30, description: 'Number of days to analyze' }
   ],
+  expectedColumns: ['TOP'],
   sql: `
     WITH RecentUpload AS (
       SELECT TOP 1 upload_id
@@ -47,6 +48,7 @@ export const unusualUserActivity: QueryTemplate = {
     ORDER BY ua.total_amount DESC, ua.transaction_count DESC
   `,
   estimatedRuntime: 6,
+  estimatedExecutionTime: 6000,
   complexity: 'medium',
   tags: ['user-activity', 'behavioral-analysis', 'volume-analysis']
 };
@@ -100,6 +102,7 @@ export const userAccessPatterns: QueryTemplate = {
     ORDER BY unique_ip_count DESC, weekend_logins DESC
   `,
   estimatedRuntime: 4,
+  estimatedExecutionTime: 4000,
   complexity: 'medium',
   tags: ['access-patterns', 'security', 'behavioral-analysis']
 };

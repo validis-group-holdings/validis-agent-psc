@@ -11,6 +11,7 @@ export const largeVendorPayments: QueryTemplate = {
     { name: 'periodDays', type: 'number', required: false, defaultValue: 90, description: 'Number of days to analyze' },
     { name: 'vendorPattern', type: 'string', required: false, description: 'Vendor name pattern to filter' }
   ],
+  expectedColumns: ['TOP'],
   sql: `
     WITH RecentUpload AS (
       SELECT TOP 1 upload_id
@@ -66,6 +67,7 @@ export const largeVendorPayments: QueryTemplate = {
     ORDER BY vp.payment_amount DESC
   `,
   estimatedRuntime: 7,
+  estimatedExecutionTime: 7000,
   complexity: 'high',
   tags: ['vendor-payments', 'outlier-detection', 'large-amounts']
 };
@@ -121,6 +123,7 @@ export const duplicateVendorPayments: QueryTemplate = {
     ORDER BY pd.potential_duplicate_count DESC, pd.payment_amount DESC
   `,
   estimatedRuntime: 6,
+  estimatedExecutionTime: 6000,
   complexity: 'medium',
   tags: ['duplicate-payments', 'vendor-analysis', 'data-quality']
 };

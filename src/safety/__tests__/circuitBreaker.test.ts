@@ -148,8 +148,15 @@ describe('QueryTimeoutEnforcer', () => {
 
     it('should timeout long-running functions', async () => {
       const mockFn = jest.fn().mockImplementation(async (signal) => {
-        await new Promise(resolve => setTimeout(resolve, 200));
-        return 'success';
+        // Check for abort signal and throw proper error
+        return new Promise((resolve, reject) => {
+          signal.addEventListener('abort', () => {
+            const error = new Error('AbortError');
+            error.name = 'AbortError';
+            reject(error);
+          });
+          setTimeout(() => resolve('success'), 200);
+        });
       });
       
       await expect(
@@ -159,13 +166,14 @@ describe('QueryTimeoutEnforcer', () => {
 
     it('should handle abort signal in function', async () => {
       const mockFn = jest.fn().mockImplementation(async (signal) => {
-        await new Promise((resolve, reject) => {
+        return new Promise((resolve, reject) => {
           signal.addEventListener('abort', () => {
-            reject(new Error('AbortError'));
+            const error = new Error('AbortError');
+            error.name = 'AbortError';
+            reject(error);
           });
           setTimeout(resolve, 200);
         });
-        return 'success';
       });
       
       await expect(
@@ -267,6 +275,9 @@ describe('OverloadProtection', () => {
     });
 
     it('should reject queries when rate limit is exceeded', () => {
+      // Mock no active queries to avoid concurrent limit
+      jest.spyOn(QueryTimeoutEnforcer, 'getActiveQueryCount').mockReturnValue(0);
+      
       // Simulate many queries in short time
       for (let i = 0; i < 100; i++) {
         OverloadProtection.registerQuery();

@@ -10,6 +10,7 @@ export const duplicateTransactions: QueryTemplate = {
     { name: 'dayRange', type: 'number', required: false, defaultValue: 1, description: 'Number of days within which to look for duplicates' },
     { name: 'minAmount', type: 'number', required: false, defaultValue: 100, description: 'Minimum amount to consider for duplicates' }
   ],
+  expectedColumns: ['TOP'],
   sql: `
     WITH RecentUpload AS (
       SELECT TOP 1 upload_id
@@ -49,6 +50,7 @@ export const duplicateTransactions: QueryTemplate = {
     ORDER BY pd.duplicate_count DESC, pd.amount DESC
   `,
   estimatedRuntime: 6,
+  estimatedExecutionTime: 6000,
   complexity: 'medium',
   tags: ['duplicates', 'data-quality', 'fraud-detection']
 };
@@ -110,6 +112,7 @@ export const benfordsLawAnalysis: QueryTemplate = {
     ORDER BY be.digit
   `,
   estimatedRuntime: 8,
+  estimatedExecutionTime: 8000,
   complexity: 'high',
   tags: ['benfords-law', 'statistical-analysis', 'fraud-detection', 'data-integrity']
 };

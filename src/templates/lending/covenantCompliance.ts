@@ -13,6 +13,7 @@ export const debtCovenantMonitoring: QueryTemplate = {
     { name: 'minNetWorth', type: 'number', required: false, description: 'Minimum net worth requirement' },
     { name: 'monthsToAnalyze', type: 'number', required: false, defaultValue: 12, description: 'Number of months for analysis' }
   ],
+  expectedColumns: ['TOP'],
   sql: `
     WITH RecentUpload AS (
       SELECT TOP 1 upload_id
@@ -251,6 +252,7 @@ export const debtCovenantMonitoring: QueryTemplate = {
     ORDER BY cc.balance_year DESC, cc.balance_quarter DESC
   `,
   estimatedRuntime: 10,
+  estimatedExecutionTime: 10000,
   complexity: 'high',
   tags: ['debt-covenants', 'compliance-monitoring', 'financial-ratios', 'loan-terms']
 };
@@ -409,6 +411,7 @@ export const covenantTrendAnalysis: QueryTemplate = {
     ORDER BY ta.ratio_year DESC, ta.ratio_quarter DESC
   `,
   estimatedRuntime: 9,
+  estimatedExecutionTime: 9000,
   complexity: 'high',
   tags: ['covenant-trends', 'predictive-analysis', 'compliance-risk', 'trend-monitoring']
 };

@@ -10,6 +10,7 @@ export const revenueGrowthAnalysis: QueryTemplate = {
     { name: 'monthsToAnalyze', type: 'number', required: false, defaultValue: 24, description: 'Number of months to analyze' },
     { name: 'revenueAccountPattern', type: 'string', required: false, defaultValue: '4%', description: 'Account pattern for revenue accounts' }
   ],
+  expectedColumns: ['TOP'],
   sql: `
     WITH RecentUpload AS (
       SELECT TOP 1 upload_id
@@ -92,6 +93,7 @@ export const revenueGrowthAnalysis: QueryTemplate = {
     ORDER BY ra.revenue_year DESC, ra.revenue_month DESC, ra.monthly_revenue DESC
   `,
   estimatedRuntime: 7,
+  estimatedExecutionTime: 7000,
   complexity: 'high',
   tags: ['revenue-growth', 'trend-analysis', 'business-performance']
 };
@@ -172,6 +174,7 @@ export const seasonalityAnalysis: QueryTemplate = {
     ORDER BY sa.revenue_month
   `,
   estimatedRuntime: 8,
+  estimatedExecutionTime: 8000,
   complexity: 'high',
   tags: ['seasonality', 'revenue-patterns', 'business-cycles']
 };

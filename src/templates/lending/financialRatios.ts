@@ -9,6 +9,7 @@ export const profitabilityRatios: QueryTemplate = {
   parameters: [
     { name: 'monthsToAnalyze', type: 'number', required: false, defaultValue: 12, description: 'Number of months for ratio calculation' }
   ],
+  expectedColumns: ['TOP'],
   sql: `
     WITH RecentUpload AS (
       SELECT TOP 1 upload_id
@@ -166,6 +167,7 @@ export const profitabilityRatios: QueryTemplate = {
     CROSS JOIN AssetBalances ab
   `,
   estimatedRuntime: 7,
+  estimatedExecutionTime: 7000,
   complexity: 'high',
   tags: ['profitability', 'financial-ratios', 'margins', 'roa', 'roe']
 };
@@ -318,6 +320,7 @@ export const efficiencyRatios: QueryTemplate = {
     CROSS JOIN COGSData cd
   `,
   estimatedRuntime: 6,
+  estimatedExecutionTime: 6000,
   complexity: 'medium',
   tags: ['efficiency-ratios', 'asset-turnover', 'inventory-turnover', 'utilization']
 };

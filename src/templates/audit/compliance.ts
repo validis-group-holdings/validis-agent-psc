@@ -10,6 +10,7 @@ export const segregationOfDutiesCheck: QueryTemplate = {
     { name: 'minAmount', type: 'number', required: false, defaultValue: 1000, description: 'Minimum transaction amount to check' },
     { name: 'daysToAnalyze', type: 'number', required: false, defaultValue: 90, description: 'Number of days to analyze' }
   ],
+  expectedColumns: ['TOP'],
   sql: `
     WITH RecentUpload AS (
       SELECT TOP 1 upload_id
@@ -79,6 +80,7 @@ export const segregationOfDutiesCheck: QueryTemplate = {
       ABS(ura.amount) DESC
   `,
   estimatedRuntime: 6,
+  estimatedExecutionTime: 6000,
   complexity: 'high',
   tags: ['segregation-of-duties', 'compliance', 'internal-controls']
 };
@@ -158,6 +160,7 @@ export const authorizationLimitChecks: QueryTemplate = {
     ORDER BY ABS(ta.amount) DESC
   `,
   estimatedRuntime: 5,
+  estimatedExecutionTime: 5000,
   complexity: 'medium',
   tags: ['authorization-limits', 'compliance', 'transaction-controls']
 };

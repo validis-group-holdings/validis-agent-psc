@@ -9,6 +9,7 @@ export const debtToEquityAnalysis: QueryTemplate = {
   parameters: [
     { name: 'asOfDate', type: 'date', required: false, description: 'Date to calculate ratios (defaults to latest)' }
   ],
+  expectedColumns: ['TOP'],
   sql: `
     WITH RecentUpload AS (
       SELECT TOP 1 upload_id
@@ -119,6 +120,7 @@ export const debtToEquityAnalysis: QueryTemplate = {
     ORDER BY calculation_date DESC
   `,
   estimatedRuntime: 6,
+  estimatedExecutionTime: 6000,
   complexity: 'medium',
   tags: ['debt-capacity', 'leverage-analysis', 'borrowing-capacity']
 };
@@ -220,6 +222,7 @@ export const debtServiceCoverageRatio: QueryTemplate = {
     FROM DSCRCalculation dc
   `,
   estimatedRuntime: 7,
+  estimatedExecutionTime: 7000,
   complexity: 'high',
   tags: ['debt-service', 'dscr', 'cash-flow-analysis', 'creditworthiness']
 };

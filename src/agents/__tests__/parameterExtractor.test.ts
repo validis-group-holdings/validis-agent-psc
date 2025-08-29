@@ -54,6 +54,8 @@ describe('ParameterExtractor', () => {
       ],
       sql: 'SELECT * FROM transactions WHERE amount > :threshold',
       estimatedRuntime: 5,
+      estimatedExecutionTime: 5000,
+      expectedColumns: ['id', 'amount', 'client_id'],
       complexity: 'medium',
       tags: ['financial', 'analysis']
     };

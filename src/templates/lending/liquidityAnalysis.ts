@@ -10,6 +10,7 @@ export const liquidityRatioAnalysis: QueryTemplate = {
     { name: 'asOfDate', type: 'date', required: false, description: 'Date for ratio calculation (defaults to latest)' },
     { name: 'periodsToCompare', type: 'number', required: false, defaultValue: 4, description: 'Number of periods for trend analysis' }
   ],
+  expectedColumns: ['TOP'],
   sql: `
     WITH RecentUpload AS (
       SELECT TOP 1 upload_id
@@ -242,6 +243,7 @@ export const liquidityRatioAnalysis: QueryTemplate = {
     ORDER BY lt.balance_year DESC, lt.balance_quarter DESC
   `,
   estimatedRuntime: 8,
+  estimatedExecutionTime: 8000,
   complexity: 'high',
   tags: ['liquidity-analysis', 'current-ratio', 'quick-ratio', 'working-capital', 'cash-ratio']
 };
@@ -494,6 +496,7 @@ export const cashConversionCycle: QueryTemplate = {
     FROM CashConversionAnalysis cca
   `,
   estimatedRuntime: 9,
+  estimatedExecutionTime: 9000,
   complexity: 'high',
   tags: ['cash-conversion-cycle', 'working-capital-efficiency', 'dso', 'dio', 'dpo', 'operational-efficiency']
 };

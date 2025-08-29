@@ -11,6 +11,7 @@ export const monthEndAdjustments: QueryTemplate = {
     { name: 'daysFromMonthEnd', type: 'number', required: false, defaultValue: 3, description: 'Days from month-end to consider' },
     { name: 'minAmount', type: 'number', required: false, defaultValue: 1000, description: 'Minimum adjustment amount' }
   ],
+  expectedColumns: ['TOP'],
   sql: `
     WITH RecentUpload AS (
       SELECT TOP 1 upload_id
@@ -65,6 +66,7 @@ export const monthEndAdjustments: QueryTemplate = {
     ORDER BY mea.entry_date DESC, ABS(mea.amount) DESC
   `,
   estimatedRuntime: 7,
+  estimatedExecutionTime: 7000,
   complexity: 'high',
   tags: ['month-end', 'adjustments', 'timing-analysis', 'accruals']
 };
@@ -123,6 +125,7 @@ export const quarterEndAdjustments: QueryTemplate = {
     ORDER BY qed.quarter_end_date DESC, ABS(je.amount) DESC
   `,
   estimatedRuntime: 8,
+  estimatedExecutionTime: 8000,
   complexity: 'high',
   tags: ['quarter-end', 'significant-adjustments', 'period-end-analysis']
 };

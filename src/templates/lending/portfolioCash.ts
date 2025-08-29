@@ -10,6 +10,7 @@ export const cashFlowAnalysis: QueryTemplate = {
     { name: 'monthsToAnalyze', type: 'number', required: false, defaultValue: 12, description: 'Number of months to analyze' },
     { name: 'minAmount', type: 'number', required: false, defaultValue: 1000, description: 'Minimum transaction amount to include' }
   ],
+  expectedColumns: ['TOP'],
   sql: `
     WITH RecentUpload AS (
       SELECT TOP 1 upload_id
@@ -63,6 +64,7 @@ export const cashFlowAnalysis: QueryTemplate = {
     ORDER BY mcf.flow_year DESC, mcf.flow_month DESC
   `,
   estimatedRuntime: 6,
+  estimatedExecutionTime: 6000,
   complexity: 'medium',
   tags: ['cash-flow', 'liquidity-analysis', 'financial-performance']
 };
@@ -141,6 +143,7 @@ export const dailyCashPosition: QueryTemplate = {
     ORDER BY cp.activity_date DESC, cp.running_balance ASC
   `,
   estimatedRuntime: 5,
+  estimatedExecutionTime: 5000,
   complexity: 'medium',
   tags: ['daily-cash', 'liquidity-monitoring', 'cash-management']
 };

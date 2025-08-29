@@ -11,6 +11,7 @@ export const journalEntriesOverThreshold: QueryTemplate = {
     { name: 'startDate', type: 'date', required: false, description: 'Start date for filtering (optional)' },
     { name: 'endDate', type: 'date', required: false, description: 'End date for filtering (optional)' }
   ],
+  expectedColumns: ['journal_entry_id', 'entry_date', 'amount', 'account_code', 'account_name', 'description', 'reference_number', 'source_document'],
   sql: `
     WITH RecentUpload AS (
       SELECT TOP 1 upload_id
@@ -36,6 +37,7 @@ export const journalEntriesOverThreshold: QueryTemplate = {
     ORDER BY je.amount DESC
   `,
   estimatedRuntime: 2,
+  estimatedExecutionTime: 2000,
   complexity: 'low',
   tags: ['threshold', 'journal-entries', 'amount-analysis']
 };
@@ -49,6 +51,7 @@ export const roundAmountJournalEntries: QueryTemplate = {
   parameters: [
     { name: 'minAmount', type: 'number', required: false, defaultValue: 1000, description: 'Minimum amount to consider' }
   ],
+  expectedColumns: ['journal_entry_id', 'entry_date', 'amount', 'account_code', 'account_name', 'description', 'reference_number'],
   sql: `
     WITH RecentUpload AS (
       SELECT TOP 1 upload_id
@@ -72,6 +75,7 @@ export const roundAmountJournalEntries: QueryTemplate = {
     ORDER BY je.amount DESC
   `,
   estimatedRuntime: 3,
+  estimatedExecutionTime: 3000,
   complexity: 'low',
   tags: ['round-amounts', 'suspicious-patterns', 'journal-entries']
 };

@@ -71,7 +71,9 @@ describe('QueryAgent', () => {
         ],
         sql: 'SELECT * FROM journal_entries WHERE amount > :threshold',
         estimatedRuntime: 5,
+        estimatedExecutionTime: 5000,
         complexity: 'low' as const,
+        expectedColumns: ['id', 'amount', 'description'],
         tags: ['journal', 'threshold']
       };
 
@@ -153,6 +155,8 @@ describe('QueryAgent', () => {
         ],
         sql: 'SELECT * FROM journal_entries WHERE amount > :threshold',
         estimatedRuntime: 5,
+        estimatedExecutionTime: 5000,
+        expectedColumns: ['id', 'amount', 'description'],
         complexity: 'low' as const
       };
 
@@ -199,6 +203,8 @@ describe('QueryAgent', () => {
         parameters: [],
         sql: 'SELECT * FROM journal_entries',
         estimatedRuntime: 5,
+        estimatedExecutionTime: 5000,
+        expectedColumns: ['id', 'client_id'],
         complexity: 'low' as const
       };
 

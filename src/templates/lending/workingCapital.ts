@@ -10,6 +10,7 @@ export const workingCapitalAnalysis: QueryTemplate = {
     { name: 'asOfDate', type: 'date', required: false, description: 'Date to calculate working capital (defaults to latest)' },
     { name: 'periodsToCompare', type: 'number', required: false, defaultValue: 4, description: 'Number of periods to compare for trend analysis' }
   ],
+  expectedColumns: ['TOP'],
   sql: `
     WITH RecentUpload AS (
       SELECT TOP 1 upload_id
@@ -153,6 +154,7 @@ export const workingCapitalAnalysis: QueryTemplate = {
     ORDER BY wcm.balance_year DESC, wcm.balance_quarter DESC
   `,
   estimatedRuntime: 8,
+  estimatedExecutionTime: 8000,
   complexity: 'high',
   tags: ['working-capital', 'liquidity-analysis', 'current-ratio', 'quick-ratio']
 };
@@ -263,6 +265,7 @@ export const accountsReceivableTurnover: QueryTemplate = {
     CROSS JOIN AverageAR aar
   `,
   estimatedRuntime: 6,
+  estimatedExecutionTime: 6000,
   complexity: 'medium',
   tags: ['accounts-receivable', 'turnover-analysis', 'dso', 'collection-efficiency']
 };
