@@ -143,9 +143,49 @@ jest.mock('../session/manager', () => ({
 jest.mock('../modes', () => ({
   modeManager: {
     getModeConstraints: jest.fn().mockReturnValue({}),
-    validateModeTransition: jest.fn().mockReturnValue({ isValid: true })
+    validateModeTransition: jest.fn().mockReturnValue({ isValid: true }),
+    getSessionStats: jest.fn().mockReturnValue({
+      mode: 'audit',
+      sessionAge: 1000,
+      lastActivity: new Date(),
+      uploadContext: {
+        current: 'upload_test_202401',
+        available: 1
+      },
+      locked: true,
+      recommendations: []
+    }),
+    getCurrentMode: jest.fn().mockReturnValue({
+      validateQuery: jest.fn().mockResolvedValue({ isValid: true, errors: [], warnings: [] }),
+      modifyQuery: jest.fn().mockResolvedValue({ modifiedQuery: 'SELECT * FROM test', warnings: [] }),
+      getConstraints: jest.fn().mockReturnValue({}),
+      getAvailableActions: jest.fn().mockReturnValue(['analyze', 'report'])
+    }),
+    initializeMode: jest.fn().mockResolvedValue({
+      sessionId: 'test-session',
+      clientId: 'test-client',
+      mode: 'audit',
+      currentUploadId: 'upload_test_202401',
+      availableUploadIds: ['upload_test_202401'],
+      createdAt: new Date(),
+      lastActivity: new Date(),
+      locked: true
+    }),
+    applyScopingToQuery: jest.fn().mockImplementation((query) => query),
+    isSessionValid: jest.fn().mockReturnValue(true),
+    updateSessionActivity: jest.fn().mockImplementation((ctx) => ({ ...ctx, lastActivity: new Date() }))
+  },
+  WorkflowModeFactory: class MockWorkflowModeFactory {
+    createMode() { return { validateQuery: jest.fn(), modifyQuery: jest.fn() }; }
+    getAvailableModes() { return ['audit', 'lending']; }
+    validateModeConfig() { return true; }
+  },
+  WorkflowModeManager: class MockWorkflowModeManager {
+    getCurrentMode() { return { validateQuery: jest.fn(), modifyQuery: jest.fn() }; }
+    canSwitchMode() { return false; }
+    initializeMode() { return Promise.resolve({ sessionId: 'test', clientId: 'test', mode: 'audit' }); }
   }
-}));
+}))
 
 // Global test timeout
 jest.setTimeout(10000);

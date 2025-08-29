@@ -172,7 +172,7 @@ export class SafetyMetricsCollector {
     // Redis logging (if available)
     if (this.redisClient) {
       const key = `audit:${new Date().toISOString().split('T')[0]}`; // Daily key
-      this.redisClient.lpush(key, JSON.stringify(entry)).catch((error: Error) => {
+      this.redisClient.lPush(key, JSON.stringify(entry)).catch((error: Error) => {
         console.error('Failed to write audit log to Redis:', error);
       });
 
@@ -201,7 +201,7 @@ export class SafetyMetricsCollector {
     // Store in Redis with expiration
     if (this.redisClient) {
       const key = `metrics:system:${Date.now()}`;
-      this.redisClient.setex(key, 86400, JSON.stringify(systemMetrics)).catch((error: Error) => {
+      this.redisClient.setEx(key, 86400, JSON.stringify(systemMetrics)).catch((error: Error) => {
         console.error('Failed to store system metrics in Redis:', error);
       });
     }
@@ -226,7 +226,7 @@ export class SafetyMetricsCollector {
     // Persist to Redis
     if (this.redisClient) {
       const key = 'metrics:history';
-      this.redisClient.setex(key, 86400, JSON.stringify(this.metricsHistory)).catch((error: Error) => {
+      this.redisClient.setEx(key, 86400, JSON.stringify(this.metricsHistory)).catch((error: Error) => {
         console.error('Failed to save metrics history to Redis:', error);
       });
     }

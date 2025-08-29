@@ -1,10 +1,6 @@
 import { createClient, RedisClientType } from 'redis';
-<<<<<<< HEAD
-import { config } from '@/config';
-=======
 import { config } from '../config';
->>>>>>> main
-import { QueryResult } from '@/types';
+import { QueryResult } from '../types';
 
 let redisClient: RedisClientType | null = null;
 

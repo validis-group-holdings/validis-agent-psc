@@ -61,8 +61,8 @@ describe('Workflow Integration Tests', () => {
     getConnection.mockResolvedValue(mockDb);
     getRedisClient.mockReturnValue(mockRedis);
     
-    const { default: createApp } = require('../../src/server');
-    app = createApp();
+    const serverModule = require('../../src/server');
+    app = serverModule.default;
   });
 
   beforeEach(() => {

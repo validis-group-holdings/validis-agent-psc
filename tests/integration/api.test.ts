@@ -49,8 +49,8 @@ describe('API Integration Tests', () => {
     getRedisClient.mockReturnValue(mockRedis);
     
     // Import app after mocks are set up
-    const { default: createApp } = require('../../src/server');
-    app = createApp();
+    const serverModule = require('../../src/server');
+    app = serverModule.default;
     
     server = app.listen(0); // Use random available port
   });

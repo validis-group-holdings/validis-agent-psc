@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import { config } from './config';
 import { connectDatabase } from './db/connection';
 import { connectRedis } from './db/redis';
+import { initializeLangChain } from './config/langchain';
 import { healthRouter } from './routes/health';
 import { queryRouter } from './routes/query';
 import { errorHandler } from './middleware/errorHandler';
@@ -26,12 +27,12 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// Health check route (before safety middleware)
+app.use('/health', healthRouter);
+
 // Safety middleware (applied globally)
 app.use(auditLogger);
 app.use(clientRateLimit);
-
-// Health check route
-app.use('/health', healthRouter);
 
 // Safety monitoring routes
 app.get('/api/safety/metrics', systemMetrics);
@@ -49,11 +50,20 @@ async function startServer(): Promise<void> {
     // Validate environment configuration
     config.validate();
     
-    // Connect to database
-    await connectDatabase();
+    // Connect to database (optional for testing)
+    try {
+      await connectDatabase();
+    } catch (dbError) {
+      console.warn('⚠️  Database connection failed - running in limited mode');
+      console.warn('   Some features may not be available');
+    }
     
     // Connect to Redis
     await connectRedis();
+    
+    // Initialize LangChain for natural language processing
+    initializeLangChain();
+    console.log('🤖 LangChain initialized with Anthropic Claude');
     
     // Initialize safety layer
     await initializeSafetyLayer();
