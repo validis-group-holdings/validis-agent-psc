@@ -4,7 +4,8 @@ module.exports = {
   setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts'],
   roots: ['<rootDir>/src', '<rootDir>/tests'],
   testMatch: [
-    '**/__tests__/**/*.ts',
+    '**/__tests__/**/*.test.ts',
+    '**/__tests__/**/*.spec.ts',
     '**/?(*.)+(spec|test).ts',
     '**/tests/**/*.test.ts',
     '**/tests/**/*.e2e.ts'
@@ -12,7 +13,8 @@ module.exports = {
   testPathIgnorePatterns: [
     '/node_modules/',
     '/tests/utils/',
-    '/__tests__/setup.ts'
+    '/setup\\.ts$/',
+    'setup\\.ts$'
   ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1'

@@ -93,14 +93,14 @@ describe('QueryValidator', () => {
       `;
       const result = await QueryValidator.validate(query, '123', 'audit');
       
-      expect(result.warnings).toContain(expect.stringContaining('Query accesses non-upload tables: regular_table'));
+      expect(result.warnings).toContainEqual(expect.stringContaining('Query accesses non-upload tables: regular_table'));
     });
 
     it('should generate performance warnings', async () => {
       const query = 'SELECT * FROM upload_table_client1 WHERE name LIKE \'%test%\' AND client_id = \'123\'';
       const result = await QueryValidator.validate(query, '123', 'audit');
       
-      expect(result.warnings).toContain(expect.stringContaining('LIKE with leading wildcard detected'));
+      expect(result.warnings).toContainEqual(expect.stringContaining('LIKE with leading wildcard detected'));
     });
   });
 
@@ -210,7 +210,7 @@ describe('QueryValidator', () => {
       const result = await QueryValidator.validate(query, '123', 'audit');
       
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain(expect.stringContaining('Failed to validate upload table'));
+      expect(result.errors).toContainEqual(expect.stringContaining('Failed to validate upload table'));
     });
   });
 
@@ -232,7 +232,7 @@ describe('QueryValidator', () => {
       
       const result = await QueryValidator.validate(complexQuery, '123', 'audit');
       
-      expect(result.warnings).toContain(expect.stringContaining('High complexity query detected'));
+      expect(result.warnings).toContainEqual(expect.stringContaining('High complexity query detected'));
     });
 
     it('should warn about queries with many tables', async () => {
@@ -249,8 +249,8 @@ describe('QueryValidator', () => {
       
       const result = await QueryValidator.validate(query, '123', 'audit');
       
-      expect(result.warnings).toContain(expect.stringContaining('Query joins'));
-      expect(result.warnings).toContain(expect.stringContaining('tables'));
+      expect(result.warnings).toContainEqual(expect.stringContaining('Query joins'));
+      expect(result.warnings).toContainEqual(expect.stringContaining('tables'));
     });
   });
 });

@@ -98,14 +98,14 @@ export class QueryGovernor {
     
     // Find the SELECT keyword and inject TOP
     const selectMatch = query.match(/(select)\s+/i);
-    if (!selectMatch) {
+    if (!selectMatch || selectMatch.index === undefined) {
       return { query, modified: false, maxRows };
     }
     
-    const beforeSelect = query.substring(0, selectMatch.index! + selectMatch[0].length);
-    const afterSelect = query.substring(selectMatch.index! + selectMatch[0].length);
+    const beforeSelect = query.substring(0, selectMatch.index + 6); // 'SELECT'
+    const afterSelect = query.substring(selectMatch.index + 6);
     
-    const modifiedQuery = `${beforeSelect}TOP ${maxRows} ${afterSelect}`;
+    const modifiedQuery = `${beforeSelect} TOP ${maxRows}${afterSelect}`;
     
     return { 
       query: modifiedQuery, 
