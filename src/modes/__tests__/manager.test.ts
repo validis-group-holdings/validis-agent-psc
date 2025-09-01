@@ -2,6 +2,9 @@
  * Mode Manager Tests
  */
 
+// Don't use the mocked version for these tests
+jest.unmock('../index');
+
 import { WorkflowModeManager, WorkflowModeFactory } from '../index';
 import { AuditModeStrategy } from '../audit';
 import { LendingModeStrategy } from '../lending';

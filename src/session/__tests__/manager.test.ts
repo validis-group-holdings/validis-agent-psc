@@ -4,7 +4,6 @@
 
 import { SessionManager } from '../manager';
 import { SessionContext, WorkflowMode } from '../../modes/types';
-import { RedisService } from '../../db/redis';
 import * as modeIndex from '../../modes';
 import * as uploadHelpers from '../../db/uploadTableHelpers';
 

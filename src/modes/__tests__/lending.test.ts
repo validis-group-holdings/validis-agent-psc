@@ -2,6 +2,10 @@
  * Lending Mode Strategy Tests
  */
 
+// Don't use the mocked version for these tests
+jest.unmock('../index');
+jest.unmock('../lending');
+
 import { LendingModeStrategy } from '../lending';
 import { ModeContext, WorkflowMode } from '../types';
 import * as uploadHelpers from '../../db/uploadTableHelpers';

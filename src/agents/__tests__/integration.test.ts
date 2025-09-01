@@ -1,6 +1,7 @@
 import './setup';
 import { QueryAgent, AgentQueryRequest } from '../queryAgent';
 import { createMockQueryRequest, expectValidQueryResponse, measureExecutionTime } from './setup';
+import { initializeLangChain } from '../../config/langchain';
 
 // This integration test focuses on testing the complete agent pipeline
 // with realistic scenarios, without mocking internal components
@@ -8,6 +9,8 @@ describe('Agent Pipeline Integration', () => {
   let agent: QueryAgent;
 
   beforeAll(async () => {
+    // Initialize LangChain for real integration tests
+    initializeLangChain();
     // Initialize the agent without mocks to test real integration
     agent = new QueryAgent();
   });

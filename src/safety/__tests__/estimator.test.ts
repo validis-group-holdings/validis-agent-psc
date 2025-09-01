@@ -1,10 +1,14 @@
 import { QueryCostEstimator } from '../estimator';
-import { getTableStatistics } from '@/db/uploadTableHelpers';
 
-jest.mock('@/db/uploadTableHelpers');
+// Mock the uploadTableHelpers module
+jest.mock('@/db/uploadTableHelpers', () => ({
+  getTableStatistics: jest.fn()
+}));
+
+const { getTableStatistics } = require('@/db/uploadTableHelpers');
 
 describe('QueryCostEstimator', () => {
-  const mockGetTableStatistics = getTableStatistics as jest.MockedFunction<typeof getTableStatistics>;
+  const mockGetTableStatistics = getTableStatistics as jest.MockedFunction<any>;
 
   beforeEach(() => {
     jest.clearAllMocks();
