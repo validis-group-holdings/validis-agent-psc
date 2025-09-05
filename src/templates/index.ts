@@ -99,6 +99,38 @@ export const LENDING_TEMPLATES: QueryTemplate[] = [
   cashConversionCycle
 ];
 
+export function getQueryTemplates(): Record<string, any> {
+  const templates: Record<string, any> = {};
+  
+  // Map audit templates
+  AUDIT_TEMPLATES.forEach(template => {
+    if (template && template.id) {
+      templates[template.id] = template;
+    }
+  });
+  
+  // Map lending templates
+  LENDING_TEMPLATES.forEach(template => {
+    if (template && template.id) {
+      templates[template.id] = template;
+    }
+  });
+  
+  // Add simplified template for common queries
+  templates['query_journal_entries'] = {
+    id: 'query_journal_entries',
+    name: 'Query Journal Entries',
+    sql: `SELECT th.id, th.transactionDate, th.description, th.journalId 
+          FROM transactionHeader th 
+          INNER JOIN upload u ON th.uploadId = u.upload_id 
+          WHERE u.client_id = @clientId 
+            AND th.transactionTypeId = 1`,
+    parameters: ['clientId']
+  };
+  
+  return templates;
+}
+
 export const ALL_TEMPLATES: QueryTemplate[] = [
   ...AUDIT_TEMPLATES,
   ...LENDING_TEMPLATES

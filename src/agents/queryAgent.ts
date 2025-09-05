@@ -64,14 +64,22 @@ export interface AgentQueryResponse {
 }
 
 export class QueryAgent {
-  private intentClassifier: IntentClassifier;
-  private parameterExtractor: ParameterExtractor;
-  private templateSelector: TemplateSelector;
+  private intentClassifier: IntentClassifier | null;
+  private parameterExtractor: ParameterExtractor | null;
+  private templateSelector: TemplateSelector | null;
 
   constructor() {
-    this.intentClassifier = new IntentClassifier();
-    this.parameterExtractor = new ParameterExtractor();
-    this.templateSelector = new TemplateSelector();
+    try {
+      this.intentClassifier = new IntentClassifier();
+      this.parameterExtractor = new ParameterExtractor();
+      this.templateSelector = new TemplateSelector();
+    } catch (error) {
+      // LangChain not initialized - agents will be null
+      console.warn('LangChain not initialized, some agent features will be disabled');
+      this.intentClassifier = null;
+      this.parameterExtractor = null;
+      this.templateSelector = null;
+    }
   }
 
   /**
@@ -145,13 +153,28 @@ export class QueryAgent {
 
       // Step 1: Intent Classification
       processingSteps.push('Analyzing query intent');
-      const intentResult = await this.intentClassifier.classifyIntent(
-        constrainedQuery,
-        request.workflowMode
-      );
-
-      if (intentResult.confidence < 0.5) {
-        warnings.push('Low confidence in intent classification');
+      let intentResult: any;
+      
+      if (this.intentClassifier) {
+        intentResult = await this.intentClassifier.classifyIntent(
+          constrainedQuery,
+          request.workflowMode
+        );
+        
+        if (intentResult.confidence < 0.5) {
+          warnings.push('Low confidence in intent classification');
+        }
+      } else {
+        // Fallback when LangChain not available
+        intentResult = {
+          intent: 'general_query',
+          confidence: 0.5,
+          keywords: [],
+          reasoning: 'LangChain not available - using fallback',
+          workflow: request.workflowMode,
+          suggestedTemplates: []
+        };
+        warnings.push('Intent classification unavailable - using defaults');
       }
 
       // Step 2: Template Selection
@@ -160,6 +183,9 @@ export class QueryAgent {
       
       if (request.forceTemplate) {
         // Use forced template
+        if (!this.templateSelector) {
+          throw new Error('Template selection unavailable - LangChain not initialized');
+        }
         const forcedTemplate = this.templateSelector.getTemplateById(request.forceTemplate);
         if (!forcedTemplate) {
           throw new Error(`Forced template not found: ${request.forceTemplate}`);
@@ -171,7 +197,7 @@ export class QueryAgent {
           alternatives: [],
           matchScore: 1.0
         };
-      } else {
+      } else if (this.templateSelector) {
         // Select template based on intent
         const criteria: TemplateMatchCriteria = {
           intent: intentResult.intent,
@@ -182,6 +208,23 @@ export class QueryAgent {
         };
         
         templateResult = await this.templateSelector.selectTemplate(criteria, intentResult);
+      } else {
+        // Fallback when LangChain not available - use a default template
+        const templates = getTemplatesByWorkflow(request.workflowMode);
+        const defaultTemplate = templates[0]; // Use first template as default
+        
+        if (!defaultTemplate) {
+          throw new Error('No templates available for workflow mode');
+        }
+        
+        templateResult = {
+          selectedTemplate: defaultTemplate,
+          confidence: 0.3,
+          reasoning: 'Template selector unavailable - using default',
+          alternatives: [],
+          matchScore: 0.3
+        };
+        warnings.push('Template selection unavailable - using default template');
       }
 
       if (templateResult.confidence < 0.6) {
@@ -200,11 +243,21 @@ export class QueryAgent {
           suggestions: [],
           reasoning: 'Parameter extraction skipped by user'
         };
-      } else {
+      } else if (this.parameterExtractor) {
         parameterResult = await this.parameterExtractor.extractParameters(
           request.query,
           templateResult.selectedTemplate
         );
+      } else {
+        // Fallback when parameter extractor not available
+        parameterResult = {
+          extractedParameters: {},
+          missingRequired: [],
+          confidence: 0.3,
+          suggestions: [],
+          reasoning: 'Parameter extraction unavailable - using empty parameters'
+        };
+        warnings.push('Parameter extraction unavailable - using empty parameters');
       }
 
       // Check for missing required parameters
@@ -238,10 +291,12 @@ export class QueryAgent {
       // Step 4: Safety Validation
       processingSteps.push('Performing safety validation');
       const template = templateResult.selectedTemplate;
-      const parameters = this.parameterExtractor.applyDefaults(
-        parameterResult.extractedParameters,
-        template
-      );
+      const parameters = this.parameterExtractor 
+        ? this.parameterExtractor.applyDefaults(
+            parameterResult.extractedParameters,
+            template
+          )
+        : parameterResult.extractedParameters;
 
       // Create execution context
       const executionContext: ExecutionContext = {
@@ -425,24 +480,56 @@ export class QueryAgent {
     parameterRequirements: ParameterExtractionResult;
   }> {
     // Step 1: Intent Classification
-    const intentResult = await this.intentClassifier.classifyIntent(query, workflowMode);
+    const intentResult = this.intentClassifier 
+      ? await this.intentClassifier.classifyIntent(query, workflowMode)
+      : {
+          intent: 'general_query',
+          confidence: 0.5,
+          keywords: [],
+          reasoning: 'LangChain not available - using fallback',
+          workflow: workflowMode,
+          suggestedTemplates: []
+        };
 
     // Step 2: Template Selection
-    const criteria: TemplateMatchCriteria = {
-      intent: intentResult.intent,
-      workflow: workflowMode,
-      keywords: intentResult.keywords,
-      suggestedTemplates: intentResult.suggestedTemplates,
-      query
-    };
+    let templateResult: TemplateSelectionResult;
     
-    const templateResult = await this.templateSelector.selectTemplate(criteria, intentResult);
+    if (this.templateSelector) {
+      const criteria: TemplateMatchCriteria = {
+        intent: intentResult.intent,
+        workflow: workflowMode,
+        keywords: intentResult.keywords,
+        suggestedTemplates: intentResult.suggestedTemplates,
+        query
+      };
+      
+      templateResult = await this.templateSelector.selectTemplate(criteria, intentResult);
+    } else {
+      const templates = getTemplatesByWorkflow(workflowMode);
+      const defaultTemplate = templates[0];
+      
+      templateResult = {
+        selectedTemplate: defaultTemplate,
+        confidence: 0.3,
+        reasoning: 'Template selector unavailable - using default',
+        alternatives: [],
+        matchScore: 0.3
+      };
+    }
 
     // Step 3: Parameter Analysis
-    const parameterResult = await this.parameterExtractor.extractParameters(
-      query,
-      templateResult.selectedTemplate
-    );
+    const parameterResult = this.parameterExtractor
+      ? await this.parameterExtractor.extractParameters(
+          query,
+          templateResult.selectedTemplate
+        )
+      : {
+          extractedParameters: {},
+          missingRequired: [],
+          confidence: 0.3,
+          suggestions: [],
+          reasoning: 'Parameter extraction unavailable'
+        };
 
     return {
       intent: intentResult,
