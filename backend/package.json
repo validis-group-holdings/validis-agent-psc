@@ -30,6 +30,7 @@
     "helmet": "^7.1.0",
     "langchain": "^0.3.33",
     "mssql": "^11.0.1",
+    "node-sql-parser": "^5.3.12",
     "winston": "^3.13.0"
   },
   "devDependencies": {
@@ -38,6 +39,7 @@
     "@types/jest": "^29.5.12",
     "@types/mssql": "^9.1.5",
     "@types/node": "^20.14.9",
+    "@types/node-sql-parser": "^1.0.0",
     "@types/supertest": "^6.0.2",
     "@typescript-eslint/eslint-plugin": "^7.14.1",
     "@typescript-eslint/parser": "^7.14.1",
