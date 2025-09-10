@@ -1,24 +1,28 @@
-import { useState, KeyboardEvent } from 'react';
-import { Box, TextField, IconButton, Paper } from '@mui/material';
-import { Send, AttachFile } from '@mui/icons-material';
+import { useState } from "react";
+import type { KeyboardEvent } from "react";
+import { Box, TextField, IconButton, Paper } from "@mui/material";
+import { Send, AttachFile } from "@mui/icons-material";
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
   disabled?: boolean;
 }
 
-export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled = false }) => {
-  const [message, setMessage] = useState('');
+export const ChatInput: React.FC<ChatInputProps> = ({
+  onSendMessage,
+  disabled = false,
+}) => {
+  const [message, setMessage] = useState("");
 
   const handleSend = () => {
     if (message.trim() && !disabled) {
       onSendMessage(message.trim());
-      setMessage('');
+      setMessage("");
     }
   };
 
   const handleKeyPress = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
@@ -29,14 +33,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled = 
       elevation={3}
       sx={{
         p: 2,
-        position: 'sticky',
+        position: "sticky",
         bottom: 0,
-        backgroundColor: 'background.paper',
+        backgroundColor: "background.paper",
         borderTop: 1,
-        borderColor: 'divider',
+        borderColor: "divider",
       }}
     >
-      <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-end' }}>
+      <Box sx={{ display: "flex", gap: 1, alignItems: "flex-end" }}>
         <IconButton size="small" disabled={disabled}>
           <AttachFile />
         </IconButton>

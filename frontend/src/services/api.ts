@@ -1,9 +1,13 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  status: number;
+
+  constructor(status: number, message: string) {
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
+    this.status = status;
   }
 }
 
@@ -18,9 +22,9 @@ async function handleResponse<T>(response: Response): Promise<T> {
 export const api = {
   async post<T>(endpoint: string, data?: unknown): Promise<T> {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: data ? JSON.stringify(data) : undefined,
     });
@@ -29,9 +33,9 @@ export const api = {
 
   async get<T>(endpoint: string): Promise<T> {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     });
     return handleResponse<T>(response);
@@ -39,9 +43,9 @@ export const api = {
 
   async put<T>(endpoint: string, data?: unknown): Promise<T> {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      method: 'PUT',
+      method: "PUT",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: data ? JSON.stringify(data) : undefined,
     });
@@ -50,9 +54,9 @@ export const api = {
 
   async delete<T>(endpoint: string): Promise<T> {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      method: 'DELETE',
+      method: "DELETE",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     });
     return handleResponse<T>(response);

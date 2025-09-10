@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from "react";
 
 interface WebSocketOptions {
   onMessage?: (data: unknown) => void;
@@ -13,7 +13,9 @@ export const useWebSocket = (url: string, options: WebSocketOptions = {}) => {
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState<unknown>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   const {
     onMessage,
@@ -43,7 +45,7 @@ export const useWebSocket = (url: string, options: WebSocketOptions = {}) => {
           setLastMessage(data);
           onMessage?.(data);
         } catch (err) {
-          console.error('Failed to parse WebSocket message:', err);
+          console.error("Failed to parse WebSocket message:", err);
         }
       };
 
@@ -59,11 +61,11 @@ export const useWebSocket = (url: string, options: WebSocketOptions = {}) => {
       };
 
       wsRef.current.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        console.error("WebSocket error:", error);
         onError?.(error);
       };
     } catch (err) {
-      console.error('Failed to connect WebSocket:', err);
+      console.error("Failed to connect WebSocket:", err);
     }
   }, [url, onMessage, onOpen, onClose, onError, reconnect, reconnectInterval]);
 
@@ -83,7 +85,7 @@ export const useWebSocket = (url: string, options: WebSocketOptions = {}) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(data));
     } else {
-      console.error('WebSocket is not connected');
+      console.error("WebSocket is not connected");
     }
   }, []);
 
