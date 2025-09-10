@@ -20,11 +20,15 @@
   "license": "ISC",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.24.3",
+    "@langchain/anthropic": "^0.3.27",
+    "@langchain/community": "^0.3.55",
+    "@langchain/core": "^0.3.75",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "express-async-errors": "^3.1.1",
     "helmet": "^7.1.0",
+    "langchain": "^0.3.33",
     "mssql": "^11.0.1",
     "winston": "^3.13.0"
   },
