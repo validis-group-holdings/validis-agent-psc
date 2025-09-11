@@ -325,7 +325,7 @@ export class IntentClassifier {
   private generateAmbiguousReasoning(
     lendingScore: number,
     auditScore: number,
-    text: string
+    _text: string
   ): string {
     if (lendingScore === 0 && auditScore === 0) {
       return 'Query does not contain clear indicators for either lending or audit context. Clarification needed.';

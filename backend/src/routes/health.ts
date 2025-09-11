@@ -20,7 +20,7 @@ interface HealthStatus {
   };
 }
 
-router.get('/health', async (req: Request, res: Response) => {
+router.get('/health', async (_req: Request, res: Response) => {
   const healthStatus: HealthStatus = {
     status: 'healthy',
     timestamp: new Date().toISOString(),
@@ -56,7 +56,8 @@ router.get('/health', async (req: Request, res: Response) => {
     }
   } catch (error) {
     healthStatus.services.anthropic.configured = false;
-    healthStatus.services.anthropic.error = error instanceof Error ? error.message : 'Unknown error';
+    healthStatus.services.anthropic.error =
+      error instanceof Error ? error.message : 'Unknown error';
     healthStatus.status = 'degraded';
   }
 
@@ -65,20 +66,20 @@ router.get('/health', async (req: Request, res: Response) => {
     healthStatus.status = 'unhealthy';
   }
 
-  const statusCode = healthStatus.status === 'healthy' ? 200 :
-                     healthStatus.status === 'degraded' ? 200 : 503;
+  const statusCode =
+    healthStatus.status === 'healthy' ? 200 : healthStatus.status === 'degraded' ? 200 : 503;
 
   res.status(statusCode).json(healthStatus);
 });
 
-router.get('/health/liveness', (req: Request, res: Response) => {
+router.get('/health/liveness', (_req: Request, res: Response) => {
   res.status(200).json({
     status: 'alive',
     timestamp: new Date().toISOString()
   });
 });
 
-router.get('/health/readiness', async (req: Request, res: Response) => {
+router.get('/health/readiness', async (_req: Request, res: Response) => {
   let isReady = true;
   const checks: Record<string, boolean> = {};
 

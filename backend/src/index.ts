@@ -1,98 +1,12 @@
-import express, { Express, Request, Response, NextFunction } from "express';
-import cors from 'cors';
-import helmet from 'helmet';
 import 'express-async-errors';
-import winston from 'winston";
-import { appConfig, initializeDatabase, initializeAnthropic } from "./config';
-import healthRoutes from './routes/health";
+import { createApp } from './app';
+import { logger } from './config/logger';
+import { env } from './config/env';
+import { initializeDatabase, initializeAnthropic } from './config';
+import { handleUncaughtException, handleUnhandledRejection } from './middleware/error-handler';
+import { cleanupStaleRequests } from './middleware/request-logger';
 
-// Configure logger
-const logger = winston.createLogger({
-  level: appConfig.logLevel,
-  format: winston.format.json(),
-  transports: [
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.timestamp(),
-        winston.format.printf(({ timestamp, level, message, ...metadata }) => {
-          let msg = `${timestamp} [${level}]: ${message}`;
-          if (Object.keys(metadata).length > 0) {
-            msg += ` ${JSON.stringify(metadata)}`;
-          }
-          return msg;
-        })
-      )
-    })
-  ]
-});
-
-const app: Express = express();
-
-// Middleware
-app.use(helmet());
-app.use(cors({
-  origin: appConfig.corsOrigin,
-  credentials: true
-}));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Request logging middleware
-app.use((req: Request, res: Response, next: NextFunction) => {
-  const start = Date.now();
-
-  res.on('finish', () => {
-    const duration = Date.now() - start;
-    logger.info('Request processed', {
-      method: req.method,
-      url: req.url,
-      status: res.statusCode,
-      duration: `${duration}ms`,
-      ip: req.ip
-    });
-  });
-
-  next();
-});
-
-// Routes
-app.use('/api', healthRoutes);
-
-// Root route
-app.get('/', (req: Request, res: Response) => {
-  res.json({
-    name: 'Validis Agent API',
-    version: '1.0.0',
-    environment: appConfig.nodeEnv,
-    timestamp: new Date().toISOString()
-  });
-});
-
-// 404 handler
-app.use((req: Request, res: Response) => {
-  res.status(404).json({
-    error: 'Not Found',
-    message: `Cannot ${req.method} ${req.url}`,
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Global error handler
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  logger.error('Unhandled error:', {
-    error: err.message,
-    stack: err.stack,
-    url: req.url,
-    method: req.method
-  });
-
-  res.status(500).json({
-    error: 'Internal Server Error',
-    message: appConfig.nodeEnv === 'development' ? err.message : 'An unexpected error occurred',
-    timestamp: new Date().toISOString()
-  });
-});
+const app = createApp();
 
 // Graceful shutdown handler
 async function gracefulShutdown(signal: string) {
@@ -115,30 +29,20 @@ async function gracefulShutdown(signal: string) {
 async function startServer() {
   try {
     // Initialize database connection (optional in development)
-    if (env.NODE_ENV !== "development" || env.MSSQL_SERVER !== "localhost") {
-      logger.info("Initializing database connection...");
+    if (process.env.NODE_ENV !== 'development' || process.env.DB_SERVER !== 'localhost') {
+      logger.info('Initializing database connection...');
       try {
         await initializeDatabase();
       } catch (error) {
-        logger.warn(
-          "Database connection failed, continuing without database:",
-          error,
-        );
-        if (env.NODE_ENV === "production") {
+        logger.warn('Database connection failed, continuing without database:', error);
+        if (process.env.NODE_ENV === 'production') {
           throw error; // In production, database is required
         }
       }
     } else {
-      logger.info(
-        "Skipping database connection in development mode (localhost)",
-      );
+      logger.info('Skipping database connection in development mode (localhost)');
     }
-if (process.env.DB_USER && process.env.DB_PASSWORD && process.env.DB_SERVER) {
 
-
-    } else {
-      logger.warn('Database credentials not configured. Skipping database initialization.');
-    }
     // Initialize Anthropic client
     if (process.env.ANTHROPIC_API_KEY) {
       logger.info('Initializing Anthropic client...');
@@ -147,31 +51,27 @@ if (process.env.DB_USER && process.env.DB_PASSWORD && process.env.DB_SERVER) {
       logger.warn('Anthropic API key not configured. Skipping Anthropic initialization.');
     }
 
+    // Initialize cleanup for stale requests
+    cleanupStaleRequests();
+
+    // Setup global error handlers
+    handleUncaughtException();
+    handleUnhandledRejection();
+
     // Start server
-    const server = app.listen(appConfig.port, () => {
-      logger.info(`Server is running on port ${appConfig.port} in ${appConfig.nodeEnv} mode`);
-      logger.info(`Health check available at http://localhost:${appConfig.port}/api/health`);
+    const server = app.listen(env.PORT, () => {
+      logger.info(`Server is running on port ${env.PORT} in ${env.NODE_ENV} mode`);
+      logger.info(`Health check available at http://localhost:${env.PORT}/api/health`);
+      logger.info(`API documentation available at http://localhost:${env.PORT}/`);
     });
 
     // Handle graceful shutdown
-    process.on("SIGTERM", () => gracefulShutdown('SIGTERM'));
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
     process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-
-    // Handle uncaught exceptions
-    process.on('uncaughtException', (error) => {
-      logger.error('Uncaught Exception:', error);
-      process.exit(1);
-    });
-
-    // Handle unhandled promise rejections
-    process.on('unhandledRejection', (reason, promise) => {
-      logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-      process.exit(1);
-    });
 
     return server;
   } catch (error) {
-    logger.error("Failed to start server:", error);
+    logger.error('Failed to start server:', error);
     process.exit(1);
   }
 }
@@ -179,6 +79,15 @@ if (process.env.DB_USER && process.env.DB_PASSWORD && process.env.DB_SERVER) {
 // Start the server if this file is run directly
 if (require.main === module) {
   startServer();
+}
+
+// Extend Express Request type to include id
+declare global {
+  namespace Express {
+    interface Request {
+      id?: string;
+    }
+  }
 }
 
 export default app;

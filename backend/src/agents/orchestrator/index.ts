@@ -3,19 +3,16 @@
  */
 
 import { ChatAnthropic } from '@langchain/anthropic';
-import { HumanMessage, SystemMessage, AIMessage } from '@langchain/core/messages';
+
 import { StringOutputParser } from '@langchain/core/output_parsers';
-import { RunnableSequence } from '@langchain/core/runnables';
+
 import { IntentClassifier } from './intentClassifier';
 import { ContextManager } from './contextManager';
 import {
-  ORCHESTRATOR_PROMPT,
   CLARIFICATION_PROMPT,
   ROUTING_EXPLANATION_PROMPT,
-  TEMPLATE_SUGGESTION_PROMPT,
   WELCOME_PROMPT,
   ERROR_PROMPTS,
-  formatConversationHistory,
   formatKeywords,
   formatConfidence
 } from './promptTemplates';
@@ -26,7 +23,6 @@ import {
   OrchestratorConfig,
   IntentType,
   AgentType,
-  ConversationMessage,
   TemplateRecommendation
 } from './types';
 
@@ -64,7 +60,7 @@ export class OrchestratorAgent {
   public async orchestrate(query: UserQuery): Promise<OrchestratorResponse> {
     try {
       // Get or create context
-      const context = this.contextManager.getContext(query.sessionId);
+      // const context = this.contextManager.getContext(query.sessionId);
 
       // Add user message to context
       await this.contextManager.addMessage(query.sessionId, {
@@ -129,7 +125,7 @@ export class OrchestratorAgent {
     const requiresClarification =
       this.config.clarificationEnabled &&
       (classification.intent === IntentType.AMBIGUOUS ||
-       classification.confidence < this.config.confidenceThreshold);
+        classification.confidence < this.config.confidenceThreshold);
 
     let targetAgent: AgentType;
     let explanation: string;
@@ -141,9 +137,8 @@ export class OrchestratorAgent {
       clarificationPrompt = await this.generateClarificationPrompt(query, classification);
     } else {
       // Determine target agent
-      targetAgent = classification.intent === IntentType.LENDING
-        ? AgentType.LENDING
-        : AgentType.AUDIT;
+      targetAgent =
+        classification.intent === IntentType.LENDING ? AgentType.LENDING : AgentType.AUDIT;
 
       // Generate routing explanation
       explanation = await this.generateExplanation(query, classification, targetAgent);
@@ -161,55 +156,58 @@ export class OrchestratorAgent {
   /**
    * Generate clarification request
    */
-  private async generateClarification(
-    query: UserQuery,
-    classification: any
-  ): Promise<string> {
+  private async generateClarification(query: UserQuery, classification: any): Promise<string> {
     const prompt = await CLARIFICATION_PROMPT.format({
       query: query.text,
       keywords: formatKeywords(classification.keywords),
-      lendingIndicators: classification.keywords
-        .filter((k: string) => this.isLendingKeyword(k))
-        .join(', ') || 'None',
-      auditIndicators: classification.keywords
-        .filter((k: string) => this.isAuditKeyword(k))
-        .join(', ') || 'None'
+      lendingIndicators:
+        classification.keywords.filter((k: string) => this.isLendingKeyword(k)).join(', ') ||
+        'None',
+      auditIndicators:
+        classification.keywords.filter((k: string) => this.isAuditKeyword(k)).join(', ') || 'None'
     });
 
     const response = await this.llm.invoke(prompt);
-    return this.outputParser.parse(response);
+    return this.outputParser.parse(response.content as string);
   }
 
   /**
    * Generate clarification prompt
    */
   private async generateClarificationPrompt(
-    query: UserQuery,
+    _query: UserQuery,
     classification: any
   ): Promise<string> {
     const basePrompt = `I need a bit more information to route your request to the right specialist.\n\n`;
 
     if (classification.confidence < 0.3) {
-      return basePrompt +
+      return (
+        basePrompt +
         `Are you looking for:\n` +
         `• Portfolio/lending analysis (multiple companies, credit assessment)\n` +
-        `• Audit procedures (single company, financial statement review)`;
+        `• Audit procedures (single company, financial statement review)`
+      );
     }
 
-    const lendingScore = classification.keywords
-      .filter((k: string) => this.isLendingKeyword(k)).length;
-    const auditScore = classification.keywords
-      .filter((k: string) => this.isAuditKeyword(k)).length;
+    const lendingScore = classification.keywords.filter((k: string) =>
+      this.isLendingKeyword(k)
+    ).length;
+    const auditScore = classification.keywords.filter((k: string) => this.isAuditKeyword(k)).length;
 
     if (Math.abs(lendingScore - auditScore) < 2) {
-      return basePrompt +
+      return (
+        basePrompt +
         `Your query could relate to either:\n` +
         `• Portfolio analysis across multiple companies\n` +
         `• Audit procedures for a specific company\n\n` +
-        `Which type of analysis do you need?`;
+        `Which type of analysis do you need?`
+      );
     }
 
-    return basePrompt + `Could you specify whether you need analysis for a single company or multiple companies?`;
+    return (
+      basePrompt +
+      `Could you specify whether you need analysis for a single company or multiple companies?`
+    );
   }
 
   /**
@@ -225,14 +223,14 @@ export class OrchestratorAgent {
     });
 
     const response = await this.llm.invoke(prompt);
-    return this.outputParser.parse(response);
+    return this.outputParser.parse(response.content as string);
   }
 
   /**
    * Generate explanation for routing decision
    */
   private async generateExplanation(
-    query: UserQuery,
+    _query: UserQuery,
     classification: any,
     targetAgent: AgentType
   ): Promise<string> {
@@ -254,7 +252,7 @@ export class OrchestratorAgent {
       name: template,
       description: this.getTemplateDescription(template),
       category: intent === IntentType.LENDING ? 'lending' : 'audit',
-      relevanceScore: 1.0 - (index * 0.2) // Decrease score for lower priority templates
+      relevanceScore: 1.0 - index * 0.2 // Decrease score for lower priority templates
     }));
   }
 
@@ -263,11 +261,16 @@ export class OrchestratorAgent {
    */
   private getTemplateDescription(templateName: string): string {
     const descriptions: Record<string, string> = {
-      'Portfolio Financial Analysis Template': 'Comprehensive analysis framework for evaluating multiple companies in a portfolio',
-      'Multi-Company Comparison Template': 'Side-by-side comparison of financial metrics across companies',
-      'Covenant Compliance Testing Template': 'Structured approach to test and document covenant compliance',
-      'Credit Risk Assessment Template': 'Framework for evaluating credit risk and lending decisions',
-      'Substantive Testing Procedures Template': 'Detailed procedures for substantive audit testing',
+      'Portfolio Financial Analysis Template':
+        'Comprehensive analysis framework for evaluating multiple companies in a portfolio',
+      'Multi-Company Comparison Template':
+        'Side-by-side comparison of financial metrics across companies',
+      'Covenant Compliance Testing Template':
+        'Structured approach to test and document covenant compliance',
+      'Credit Risk Assessment Template':
+        'Framework for evaluating credit risk and lending decisions',
+      'Substantive Testing Procedures Template':
+        'Detailed procedures for substantive audit testing',
       'Internal Control Testing Template': 'Framework for testing and evaluating internal controls',
       'Financial Statement Audit Template': 'Comprehensive audit program for financial statements',
       'Materiality Calculation Template': 'Tools and methods for calculating audit materiality'
@@ -281,8 +284,15 @@ export class OrchestratorAgent {
    */
   private isLendingKeyword(keyword: string): boolean {
     const lendingKeywords = [
-      'portfolio', 'portfolios', 'multiple companies', 'loan',
-      'lending', 'credit', 'debt', 'covenant', 'facility'
+      'portfolio',
+      'portfolios',
+      'multiple companies',
+      'loan',
+      'lending',
+      'credit',
+      'debt',
+      'covenant',
+      'facility'
     ];
     return lendingKeywords.includes(keyword.toLowerCase());
   }
@@ -292,8 +302,14 @@ export class OrchestratorAgent {
    */
   private isAuditKeyword(keyword: string): boolean {
     const auditKeywords = [
-      'audit', 'auditor', 'materiality', 'substantive',
-      'control', 'testing', 'procedure', 'assertion'
+      'audit',
+      'auditor',
+      'materiality',
+      'substantive',
+      'control',
+      'testing',
+      'procedure',
+      'assertion'
     ];
     return auditKeywords.includes(keyword.toLowerCase());
   }
@@ -308,7 +324,10 @@ export class OrchestratorAgent {
   /**
    * Handle error scenarios
    */
-  public handleError(errorType: keyof typeof ERROR_PROMPTS, params?: Record<string, string>): string {
+  public handleError(
+    errorType: keyof typeof ERROR_PROMPTS,
+    params?: Record<string, string>
+  ): string {
     let errorMessage = ERROR_PROMPTS[errorType];
 
     if (params) {

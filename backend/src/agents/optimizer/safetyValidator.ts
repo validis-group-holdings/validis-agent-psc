@@ -88,11 +88,20 @@ export class SafetyValidator {
     }
 
     // Determine overall validity
-    const hasErrors = violations.some((v) => v.severity === 'error');
-    const isSafe = !hasErrors && !this.containsSQLInjectionRisk(query);
+    // Only dangerous operations and SQL injection make a query unsafe
+    const hasDangerousErrors = violations.some(
+      (v) => v.type === 'dangerous_operation' && v.severity === 'error'
+    );
+    const isSafe = !hasDangerousErrors && !this.containsSQLInjectionRisk(query);
+
+    // Query is valid if it has no violations OR only has fixable violations
+    const fixableViolations = ['missing_upload_id', 'missing_client_id', 'missing_row_limit'];
+    const hasOnlyFixableViolations = violations.every(
+      (v) => fixableViolations.includes(v.type) || v.severity !== 'error'
+    );
 
     return {
-      isValid: violations.length === 0,
+      isValid: violations.length === 0 || hasOnlyFixableViolations,
       isSafe,
       violations
     };
@@ -292,13 +301,23 @@ export class SafetyValidator {
    * Check for SQL injection patterns
    */
   private validateSQLInjectionPatterns(query: ParsedQuery, violations: Violation[]): void {
+    // Check for suspicious WHERE conditions that indicate SQL injection
+    const hasSuspiciousConditions = this.checkForSuspiciousConditions(query);
+
+    if (hasSuspiciousConditions) {
+      violations.push({
+        type: 'dangerous_operation',
+        severity: 'error',
+        message: 'Query contains potential SQL injection pattern',
+        location: 'WHERE clause'
+      });
+      return;
+    }
+
+    // Also check the raw stringified query for other patterns
     const suspiciousPatterns = [
       /;\s*(DROP|DELETE|UPDATE|INSERT|EXEC)/i,
-      /--\s*$/,
-      /\/\*.*\*\//,
       /\bUNION\s+SELECT\b/i,
-      /\bOR\s+1\s*=\s*1\b/i,
-      /\bOR\s+'[^']*'\s*=\s*'[^']*'/i,
       /\bSLEEP\s*\(/i,
       /\bWAITFOR\s+DELAY/i,
       /\bBENCHMARK\s*\(/i
@@ -317,6 +336,51 @@ export class SafetyValidator {
         break;
       }
     }
+  }
+
+  /**
+   * Check for suspicious WHERE conditions
+   */
+  private checkForSuspiciousConditions(query: ParsedQuery): boolean {
+    // Check for always-true conditions like '1'='1' or 1=1
+    for (const condition of query.whereConditions) {
+      // Check for tautologies
+      if (condition.operator === '=' && condition.value !== null && condition.value !== undefined) {
+        // Check if comparing same literal values (e.g., '1'='1')
+        const valueStr = String(condition.value);
+        const columnStr = condition.column;
+
+        // Check for literal = literal conditions (SQL injection indicator)
+        if (
+          (valueStr === '1' && columnStr === '1') ||
+          (valueStr === 'true' && columnStr === 'true') ||
+          (valueStr === columnStr && !columnStr.includes('.'))
+        ) {
+          return true;
+        }
+      }
+
+      // Check for OR conditions with literals
+      if (condition.operator === 'OR') {
+        return true; // OR in parsed conditions is suspicious
+      }
+    }
+
+    // Check the raw AST for suspicious patterns
+    const astStr = JSON.stringify(query.ast);
+
+    // Check for '1'='1' or similar tautologies in the AST
+    if (
+      astStr.includes('"value":"1"') &&
+      astStr.includes('"right":{"type":"single_quote_string","value":"1"}')
+    ) {
+      // Check if this is part of an OR condition
+      if (astStr.includes('"operator":"OR"')) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /**
@@ -373,6 +437,11 @@ export class SafetyValidator {
    * Deep check for SQL injection risk
    */
   private containsSQLInjectionRisk(query: ParsedQuery): boolean {
+    // First check using the improved detection
+    if (this.checkForSuspiciousConditions(query)) {
+      return true;
+    }
+
     // Check for string concatenation in values
     const hasStringConcat = query.whereConditions.some((c) => {
       const valueStr = String(c.value);

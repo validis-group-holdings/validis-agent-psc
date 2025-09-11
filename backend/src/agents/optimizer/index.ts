@@ -43,6 +43,15 @@ export class QueryOptimizer {
     try {
       this.log('Starting optimization', { sql: request.sql });
 
+      // Step 0: Check for obvious SQL injection patterns in raw SQL
+      if (this.containsObviousSQLInjection(request.sql)) {
+        return this.createErrorResponse(
+          request.sql,
+          'Query contains potential SQL injection pattern',
+          ['Query contains potential SQL injection pattern']
+        );
+      }
+
       // Step 1: Parse the SQL query
       let parsedQuery: ParsedQuery;
       try {
@@ -69,28 +78,43 @@ export class QueryOptimizer {
         violations: validationResult.violations.length
       });
 
-      // Add validation violations as warnings or errors
+      // Check for dangerous operations first
+      const hasDangerousOps = validationResult.violations.some(
+        (v) => v.type === 'dangerous_operation' && v.severity === 'error'
+      );
+
+      if (hasDangerousOps) {
+        // Only return early for truly dangerous operations
+        for (const violation of validationResult.violations) {
+          if (violation.type === 'dangerous_operation' && violation.severity === 'error') {
+            errors.push(violation.message);
+          }
+        }
+        return this.createErrorResponse(
+          request.sql,
+          'Query contains dangerous operations',
+          errors,
+          warnings
+        );
+      }
+
+      // Add other violations as warnings (these will be fixed by optimizations)
       for (const violation of validationResult.violations) {
-        if (violation.severity === 'error') {
-          errors.push(violation.message);
-        } else {
+        if (violation.type !== 'dangerous_operation') {
+          // Convert missing filter errors to info level since we'll add them
+          const level = ['missing_upload_id', 'missing_client_id', 'missing_row_limit'].includes(
+            violation.type
+          )
+            ? 'info'
+            : (violation.severity as 'warning' | 'info');
+
           warnings.push({
-            level: violation.severity as 'warning' | 'info',
+            level,
             code: `VALIDATION_${violation.type.toUpperCase()}`,
             message: violation.message,
             suggestion: this.getSuggestionForViolation(violation.type)
           });
         }
-      }
-
-      // If query is not safe, return early with errors
-      if (!validationResult.isSafe) {
-        return this.createErrorResponse(
-          request.sql,
-          'Query failed safety validation',
-          errors,
-          warnings
-        );
       }
 
       // Step 3: Apply optimizations
@@ -177,7 +201,7 @@ export class QueryOptimizer {
       return {
         originalSql: request.sql,
         optimizedSql,
-        isValid: validationResult.isValid && errors.length === 0,
+        isValid: optimizedValidation.isValid && errors.length === 0,
         isSafe: optimizedValidation.isSafe,
         optimizations,
         performanceAnalysis,
@@ -375,6 +399,25 @@ export class QueryOptimizer {
     if (this.debugMode) {
       console.log(`[QueryOptimizer] ${message}`, data ? JSON.stringify(data, null, 2) : '');
     }
+  }
+
+  /**
+   * Check for obvious SQL injection patterns in raw SQL
+   */
+  private containsObviousSQLInjection(sql: string): boolean {
+    const injectionPatterns = [
+      /--\s*$/, // SQL comment at end
+      /--\s+\w/, // SQL comment inline
+      /\/\*.*\*\//, // Block comment
+      /;\s*(DROP|DELETE|UPDATE|INSERT)/i, // Multiple statements
+      /\bOR\s+'1'\s*=\s*'1'/i, // Classic injection
+      /\bOR\s+1\s*=\s*1/i, // Classic injection numeric
+      /\bUNION\s+SELECT/i, // UNION injection
+      /\bEXEC\s*\(/i, // EXEC command
+      /\bxp_cmdshell/i // Dangerous stored proc
+    ];
+
+    return injectionPatterns.some((pattern) => pattern.test(sql));
   }
 
   /**

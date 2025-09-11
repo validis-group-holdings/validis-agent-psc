@@ -47,12 +47,19 @@ export class OptimizationEngine {
     const optimizations: OptimizationResult[] = [];
     let modifiedAst = query.ast;
 
+    // Merge options into context for rules to access
+    const enrichedContext: QueryContext = {
+      domain: context?.domain || 'general',
+      ...context,
+      maxResults: options?.maxRowLimit || context?.maxResults || this.defaultOptions.maxRowLimit
+    };
+
     // Sort rules by priority (higher priority first)
     const sortedRules = [...this.rules].sort((a, b) => b.priority - a.priority);
 
     for (const rule of sortedRules) {
-      if (rule.condition(query, context)) {
-        const action = rule.apply(query, context);
+      if (rule.condition(query, enrichedContext)) {
+        const action = rule.apply(query, enrichedContext);
 
         if (action.type === 'modify' && action.modifications) {
           modifiedAst = this.applyModifications(
@@ -122,23 +129,31 @@ export class OptimizationEngine {
       {
         id: 'enforce_row_limit',
         name: 'Enforce Row Limit',
-        description: 'Add TOP/LIMIT clause if missing',
+        description: 'Add or adjust TOP/LIMIT clause',
         priority: 90,
-        condition: (query: ParsedQuery) => {
-          return query.type === 'select' && !query.limit;
+        condition: (query: ParsedQuery, context?: QueryContext) => {
+          const maxLimit = context?.maxResults || 5000;
+          return query.type === 'select' && (!query.limit || query.limit > maxLimit);
         },
-        apply: (_query: ParsedQuery, context?: QueryContext) => ({
-          type: 'modify',
-          modifications: [
-            {
-              type: 'add_limit',
-              target: 'limit',
-              value: context?.maxResults || 5000,
-              description: 'Add row limit to prevent excessive data retrieval'
-            }
-          ],
-          impact: 'high'
-        })
+        apply: (query: ParsedQuery, context?: QueryContext) => {
+          const maxLimit = context?.maxResults || 5000;
+          const description = !query.limit
+            ? 'Add row limit to prevent excessive data retrieval'
+            : `Reduce row limit from ${query.limit} to ${maxLimit}`;
+
+          return {
+            type: 'modify',
+            modifications: [
+              {
+                type: 'add_limit',
+                target: 'limit',
+                value: maxLimit,
+                description
+              }
+            ],
+            impact: 'high'
+          };
+        }
       },
 
       // Rule 3: Enforce client_id filter
@@ -338,7 +353,10 @@ export class OptimizationEngine {
         priority: 75,
         condition: (query: ParsedQuery) => {
           // Check for CROSS JOIN or JOIN without ON condition
-          return query.joins.some((j) => j.type === 'cross' || !j.condition);
+          const hasCrossJoin = query.joins.some((j) => j.type === 'cross' || !j.condition);
+          // Also check for multiple tables without joins (implicit cartesian product)
+          const hasMultipleTablesNoJoin = query.tables.length > 1 && query.joins.length === 0;
+          return hasCrossJoin || hasMultipleTablesNoJoin;
         },
         apply: (_query: ParsedQuery) => ({
           type: 'warning',
@@ -418,10 +436,22 @@ export class OptimizationEngine {
         break;
 
       case 'date_range_3months':
+        // Try to find the appropriate date column based on table
+        let dateColumn = 'transaction_date';
+        if (ast.from && Array.isArray(ast.from) && ast.from.length > 0) {
+          const firstFrom = ast.from[0] as any;
+          const tableName = (firstFrom.table || '').toLowerCase();
+          if (tableName.includes('portfolio')) {
+            dateColumn = 'position_date';
+          } else if (tableName.includes('investment')) {
+            dateColumn = 'investment_date';
+          }
+        }
+
         newCondition = {
           type: 'binary_expr',
           operator: '>=',
-          left: { type: 'column_ref', table: null, column: 'transaction_date' },
+          left: { type: 'column_ref', table: null, column: dateColumn },
           right: {
             type: 'function',
             name: 'DATEADD',

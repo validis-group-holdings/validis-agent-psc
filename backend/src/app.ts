@@ -1,29 +1,44 @@
-import express, { Application, Request, Response, NextFunction } from 'express';
+import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { env } from './config/env';
-import { logger, stream } from './config/logger';
+import { stream } from './config/logger';
+import { errorHandler, notFoundHandler } from './middleware/error-handler';
+import {
+  requestIdMiddleware,
+  requestLogger,
+  performanceMonitor
+} from './middleware/request-logger';
+import { responseUtils } from './utils/response.utils';
 import healthRoutes from './routes/health.routes';
 import aiRoutes from './routes/ai.routes';
+import chatRoutes from './routes/chat.routes';
+import queryRoutes from './routes/query.routes';
+import templateRoutes from './routes/template.routes';
+import schemaRoutes from './routes/schema.routes';
 
 // Create Express application
 export const createApp = (): Application => {
   const app = express();
 
   // Security middleware
-  app.use(helmet({
-    contentSecurityPolicy: env.NODE_ENV === 'production',
-    crossOriginEmbedderPolicy: env.NODE_ENV === 'production',
-  }));
+  app.use(
+    helmet({
+      contentSecurityPolicy: env.NODE_ENV === 'production',
+      crossOriginEmbedderPolicy: env.NODE_ENV === 'production'
+    })
+  );
 
   // CORS configuration
-  app.use(cors({
-    origin: env.CORS_ORIGIN,
-    credentials: env.CORS_CREDENTIALS,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  }));
+  app.use(
+    cors({
+      origin: env.CORS_ORIGIN,
+      credentials: env.CORS_CREDENTIALS,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization']
+    })
+  );
 
   // Body parsing middleware
   app.use(express.json({ limit: '10mb' }));
@@ -32,59 +47,34 @@ export const createApp = (): Application => {
   // Logging middleware
   app.use(morgan('combined', { stream }));
 
-  // Request ID middleware
-  app.use((req: Request, res: Response, next: NextFunction) => {
-    req.id = Math.random().toString(36).substring(2, 15);
-    res.setHeader('X-Request-Id', req.id);
-    next();
-  });
+  // Request ID and logging middleware
+  app.use(requestIdMiddleware);
+  app.use(requestLogger);
+  app.use(performanceMonitor);
 
   // API Routes
   app.use('/api/health', healthRoutes);
   app.use('/api/ai', aiRoutes);
+  app.use('/api/chat', chatRoutes);
+  app.use('/api/query', queryRoutes);
+  app.use('/api/templates', templateRoutes);
+  app.use('/api/schemas', schemaRoutes);
 
   // Root endpoint
-  app.get('/', (req: Request, res: Response) => {
-    res.json({
+  app.get('/', (_req: Request, res: Response) => {
+    responseUtils.ok(res, {
       name: 'Validis Agent Backend',
       version: '1.0.0',
       status: 'running',
-      timestamp: new Date().toISOString(),
+      timestamp: new Date().toISOString()
     });
   });
 
   // 404 handler
-  app.use((req: Request, res: Response) => {
-    res.status(404).json({
-      error: 'Not Found',
-      message: `Cannot ${req.method} ${req.path}`,
-      path: req.path,
-      timestamp: new Date().toISOString(),
-    });
-  });
+  app.use(notFoundHandler);
 
   // Global error handler
-  app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-    logger.error('Unhandled error:', {
-      error: err.message,
-      stack: err.stack,
-      path: req.path,
-      method: req.method,
-      requestId: req.id,
-    });
-
-    // Don't leak error details in production
-    const message = env.NODE_ENV === 'production'
-      ? 'Internal Server Error'
-      : err.message;
-
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message,
-      requestId: req.id,
-      timestamp: new Date().toISOString(),
-    });
-  });
+  app.use(errorHandler);
 
   return app;
 };

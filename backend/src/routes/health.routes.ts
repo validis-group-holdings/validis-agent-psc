@@ -44,7 +44,7 @@ router.get('/', async (req: Request, res: Response) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
+    uptime: process.uptime()
   });
 });
 
@@ -80,27 +80,27 @@ router.get('/ready', async (req: Request, res: Response) => {
  * GET /api/health/detailed
  * Detailed health check with all services
  */
-router.get('/detailed', async (req: Request, res: Response) => {
+router.get('/detailed', async (_req: Request, res: Response) => {
   const health: HealthStatus = {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     services: {
       database: { status: 'down' },
-      anthropic: { status: 'down' },
+      anthropic: { status: 'down' }
     },
     system: {
       memory: {
         total: os.totalmem(),
         free: os.freemem(),
         used: os.totalmem() - os.freemem(),
-        usagePercent: ((os.totalmem() - os.freemem()) / os.totalmem()) * 100,
+        usagePercent: ((os.totalmem() - os.freemem()) / os.totalmem()) * 100
       },
       cpu: {
         cores: os.cpus().length,
-        loadAverage: os.loadavg(),
-      },
-    },
+        loadAverage: os.loadavg()
+      }
+    }
   };
 
   // Check database health
@@ -111,12 +111,12 @@ router.get('/detailed', async (req: Request, res: Response) => {
 
     health.services.database = {
       status: dbHealthy ? 'up' : 'down',
-      responseTime,
+      responseTime
     };
   } catch (error: any) {
     health.services.database = {
       status: 'down',
-      error: error.message,
+      error: error.message
     };
     health.status = 'degraded';
   }
@@ -129,28 +129,26 @@ router.get('/detailed', async (req: Request, res: Response) => {
 
     health.services.anthropic = {
       status: anthropicHealthy ? 'up' : 'down',
-      responseTime,
+      responseTime
     };
   } catch (error: any) {
     health.services.anthropic = {
       status: 'down',
-      error: error.message,
+      error: error.message
     };
     health.status = 'degraded';
   }
 
   // Determine overall health status
   const allServicesDown =
-    health.services.database.status === 'down' &&
-    health.services.anthropic.status === 'down';
+    health.services.database.status === 'down' && health.services.anthropic.status === 'down';
 
   if (allServicesDown) {
     health.status = 'unhealthy';
   }
 
   // Set appropriate HTTP status code
-  const statusCode = health.status === 'healthy' ? 200 :
-                     health.status === 'degraded' ? 206 : 503;
+  const statusCode = health.status === 'healthy' ? 200 : health.status === 'degraded' ? 206 : 503;
 
   res.status(statusCode).json(health);
 });
