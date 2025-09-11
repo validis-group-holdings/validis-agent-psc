@@ -2,7 +2,7 @@
 name: validis-agent
 status: backlog
 created: 2025-09-10T11:27:42Z
-progress: 10%
+progress: 20%
 prd: .claude/prds/validis-agent.md
 github: https://github.com/validis-group-holdings/validis-agent-psc/issues/19
 ---
